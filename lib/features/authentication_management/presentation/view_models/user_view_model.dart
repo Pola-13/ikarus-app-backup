@@ -15,8 +15,10 @@ class UserViewModel extends StateNotifier<UserData?> {
     state = user;
   }
 
-  void logout() {
-    _userRepositoryImpl.logout();
+  Future<void> logout() async {
+    // Call logout API and clear local data
+    await _userRepositoryImpl.logout();
+    // Clear state
     state = null;
   }
 

@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:ikarusapp/core/network/models/responses/base_api_result.dart';
+import 'package:ikarusapp/core/utils/pref_helpers.dart';
 import 'package:ikarusapp/features/authentication_management/data/data_source/user_local_data_source.dart';
 import 'package:ikarusapp/features/authentication_management/data/data_source/user_remote_data_source.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/user_data.dart';
@@ -23,8 +24,18 @@ class UserRepositoryImpl {
     return userRemoteDataSource.signup(data);
   }
 
-  void logout() {
+  Future<BaseApiResult<Map<String, dynamic>>> logout() async {
+    // Call the logout API first
+    final result = await userRemoteDataSource.logout();
+    
+    // Clear local data regardless of API response
+    // This ensures user is logged out locally even if API call fails
     userLocalDataSource.removeUser();
+    
+    // Clear tokens from secure storage
+    await PrefHelpers.clearToken();
+    
+    return result;
   }
 
   void saveLocalUserData(UserData data) {

@@ -81,5 +81,24 @@ class UserRemoteDataSource {
   Future<dynamic> updateProfile(Map<String, dynamic> profileData) async {}
 
   // Logout method
-  Future<dynamic> logout() async {}
+  Future<BaseApiResult<Map<String, dynamic>>> logout() async {
+    try {
+      final response = await apiService.post<Map<String, dynamic>>(
+        ApiUrls.logout,
+        data: {}, // Empty body for logout
+        hasToken: true, // Logout requires authentication token
+      );
+      
+      return response;
+    } on DioException catch (e) {
+      return BaseApiResult<Map<String, dynamic>>(
+        errorMessage: "Logout failed. Please try again.",
+        apiError: ApiExceptions.handleError(e),
+      );
+    } catch (e) {
+      return BaseApiResult<Map<String, dynamic>>(
+        errorMessage: "An unexpected error occurred: ${e.toString()}",
+      );
+    }
+  }
 }

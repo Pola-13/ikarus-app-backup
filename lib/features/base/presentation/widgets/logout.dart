@@ -1,8 +1,12 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ikarusapp/core/constants/app_constants.dart';
 import 'package:ikarusapp/core/constants/app_routs.dart';
 import 'package:ikarusapp/core/constants/colors.dart';
+import 'package:ikarusapp/core/injection/user_injection.dart';
 import 'package:ikarusapp/features/base/presentation/view_models/base_view_model.dart';
 
 class LogoutButton extends StatelessWidget with BaseViewModel {
@@ -90,11 +94,37 @@ class LogoutButton extends StatelessWidget with BaseViewModel {
                             // Logout Button
                             Expanded(
                               child: TextButton(
-                                onPressed: () {
-                                  navigateToScreen(
-                                    Routes.login,
-                                    removeTop: true,
-                                  );
+                                onPressed: () async {
+                                  // Close the dialog first
+                                  Navigator.pop(context);
+                                  
+                                  // Call logout API
+                                  try {
+                                    await ProviderScope.containerOf(context, listen: false)
+                                        .read(userProvider.notifier)
+                                        .logout();
+                                  } catch (e) {
+                                    // Log error but continue with navigation
+                                    debugPrint('Logout error: $e');
+                                  }
+                                  
+                                  // Navigate to login screen after logout (regardless of API success/failure)
+                                  // Use a small delay to ensure dialog is fully closed
+                                  await Future.delayed(const Duration(milliseconds: 100));
+                                  
+                                  // Navigate to login screen
+                                  if (AppConstants.navigatorKey.currentContext != null) {
+                                    navigateToScreen(
+                                      Routes.login,
+                                      removeTop: true,
+                                    );
+                                  } else {
+                                    // Fallback: use the context from the widget
+                                    Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                                      Routes.login,
+                                      (route) => false,
+                                    );
+                                  }
                                 },
                                 style: TextButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(

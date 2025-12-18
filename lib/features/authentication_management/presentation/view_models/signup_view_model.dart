@@ -38,6 +38,13 @@ class SignupViewModel extends StateNotifier<BaseState<List<FormError>>>
 
   SignupRequest get signupRequest => _signupRequest;
 
+  // Clear error for a specific field
+  void clearFieldError(String field) {
+    final currentErrors = state.data;
+    final updatedErrors = currentErrors.where((error) => error.field != field).toList();
+    state = state.copyWith(data: updatedErrors);
+  }
+
   Future<void> validateSignUpUser({
     required String email,
     required String firstName,
@@ -87,13 +94,54 @@ class SignupViewModel extends StateNotifier<BaseState<List<FormError>>>
       );
     }
 
-    if (phoneE164.isEmpty) {
+    // Check if phone is empty or only contains the country code prefix
+    if (phoneE164.isEmpty || phoneE164.trim().length <= 4) {
       errors.add(
         FormError(
           field: UserFields.phone.field,
-          message: "enter your phone number",
+          message: "Please enter your phone number",
         ),
       );
+    } else {
+      // Extract phone number without country code
+      // Remove common country codes: +20, +962, +965, +966
+      String phoneWithoutPrefix = phoneE164.trim();
+      if (phoneWithoutPrefix.startsWith("+20")) {
+        phoneWithoutPrefix = phoneWithoutPrefix.substring(3).trim();
+      } else if (phoneWithoutPrefix.startsWith("+962")) {
+        phoneWithoutPrefix = phoneWithoutPrefix.substring(4).trim();
+      } else if (phoneWithoutPrefix.startsWith("+965")) {
+        phoneWithoutPrefix = phoneWithoutPrefix.substring(4).trim();
+      } else if (phoneWithoutPrefix.startsWith("+966")) {
+        phoneWithoutPrefix = phoneWithoutPrefix.substring(4).trim();
+      } else {
+        // If no known prefix, assume it's just the number
+        phoneWithoutPrefix = phoneWithoutPrefix.replaceFirst(RegExp(r'^\+\d+'), '').trim();
+      }
+      
+      if (phoneWithoutPrefix.isEmpty) {
+        errors.add(
+          FormError(
+            field: UserFields.phone.field,
+            message: "Please enter your phone number",
+          ),
+        );
+      } else {
+        // Validate phone number format: must start with 11, 12, 15, or 10 and be exactly 10 digits
+        // This validation is specific to Egypt (+20), but we'll apply it for all for now
+        final validPrefixes = ['11', '12', '15', '10'];
+        final isCorrectLength = phoneWithoutPrefix.length == 10;
+        final startsWithValidPrefix = validPrefixes.any((prefix) => phoneWithoutPrefix.startsWith(prefix));
+        
+        if (!isCorrectLength || !startsWithValidPrefix) {
+          errors.add(
+            FormError(
+              field: UserFields.phone.field,
+              message: "enter a valid number",
+            ),
+          );
+        }
+      }
     }
 
     if (country.isEmpty) {

@@ -29,6 +29,33 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final TextEditingController _carModelController = TextEditingController();
+  String _selectedPhoneCountryCode = "+20"; // Default to Egypt
+
+  @override
+  void initState() {
+    super.initState();
+    // Add listeners to clear errors when user starts typing
+    _firstNameCtrl.addListener(() {
+      if (_firstNameCtrl.text.isNotEmpty) {
+        ref.read(signupViewModelProvider.notifier).clearFieldError(UserFields.firstName.field);
+      }
+    });
+    _lastNameCtrl.addListener(() {
+      if (_lastNameCtrl.text.isNotEmpty) {
+        ref.read(signupViewModelProvider.notifier).clearFieldError(UserFields.lastName.field);
+      }
+    });
+    _emailController.addListener(() {
+      if (_emailController.text.isNotEmpty) {
+        ref.read(signupViewModelProvider.notifier).clearFieldError(UserFields.email.field);
+      }
+    });
+    _phoneController.addListener(() {
+      if (_phoneController.text.isNotEmpty) {
+        ref.read(signupViewModelProvider.notifier).clearFieldError(UserFields.phone.field);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -139,6 +166,11 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
                     (error) => error.field == UserFields.phone.field,
                   )
                   ?.message,
+              onCountryCodeChanged: (countryCode) {
+                setState(() {
+                  _selectedPhoneCountryCode = countryCode;
+                });
+              },
             );
           },
         ),
@@ -169,13 +201,22 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
                   )
                   ?.message,
               onCountryChanged: (val) {
-                // Country selection is handled by LocationViewModel
+                // Clear country error when country is selected
+                if (val != null && val.isNotEmpty) {
+                  ref.read(signupViewModelProvider.notifier).clearFieldError(UserFields.country.field);
+                }
               },
               onGovernorateChanged: (val) {
-                // City selection is handled by LocationViewModel
+                // Clear city error when city is selected
+                if (val != null && val.isNotEmpty) {
+                  ref.read(signupViewModelProvider.notifier).clearFieldError(UserFields.city.field);
+                }
               },
               onDistrictChanged: (val) {
-                // District selection is handled by LocationViewModel
+                // Clear district error when district is selected
+                if (val != null && val.isNotEmpty) {
+                  ref.read(signupViewModelProvider.notifier).clearFieldError(UserFields.street.field);
+                }
               },
             );
           },
@@ -293,7 +334,7 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
                     email: _emailController.text.trim(),
                     firstName: _firstNameCtrl.text.trim(),
                     lastName: _lastNameCtrl.text.trim(),
-                    phoneE164: "+20${_phoneController.text.trim()}",
+                    phoneE164: "$_selectedPhoneCountryCode${_phoneController.text.trim()}",
                     country: locationState.selectedCountryCode ?? "",
                     city: locationState.selectedCityId ?? "",
                     street: locationState.selectedDistrictId ?? "",

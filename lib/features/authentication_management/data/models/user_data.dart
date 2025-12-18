@@ -15,10 +15,14 @@ class UserData {
 
   factory UserData.fromJson(Map<String, dynamic> json) {
     return UserData(
-      token: json["token"],
-      expiresAt: DateTime.tryParse(json["expires_at"] ?? ""),
-      user: json["user"] == null ? null : UserModel.fromJson(json["user"]),
-      refreshToken: json["refresh_token"],
+      token: json["token"] as String?,
+      expiresAt: json["expires_at"] != null 
+          ? DateTime.tryParse(json["expires_at"].toString())
+          : null,
+      user: json["user"] == null 
+          ? null 
+          : UserModel.fromJson(json["user"] as Map<String, dynamic>),
+      refreshToken: json["refresh_token"] as String?,
     );
   }
 

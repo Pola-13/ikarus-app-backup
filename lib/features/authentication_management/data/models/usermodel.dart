@@ -8,6 +8,7 @@ class UserModel {
     required this.phone,
     required this.isBlocked,
     required this.lastLoginAt,
+    this.profileImage,
   });
 
   final String? id;
@@ -16,6 +17,7 @@ class UserModel {
   final String? firstName;
   final String? lastName;
   final String? phone;
+  final String? profileImage;
   final bool? isBlocked;
   final DateTime? lastLoginAt;
 
@@ -26,6 +28,7 @@ class UserModel {
     String? firstName,
     String? lastName,
     String? phone,
+    String? profileImage,
     bool? isBlocked,
     DateTime? lastLoginAt,
   }) {
@@ -36,6 +39,7 @@ class UserModel {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       phone: phone ?? this.phone,
+      profileImage: profileImage ?? this.profileImage,
       isBlocked: isBlocked ?? this.isBlocked,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
     );
@@ -49,8 +53,11 @@ class UserModel {
       firstName: json["first_name"],
       lastName: json["last_name"],
       phone: json["phone"],
+      profileImage: json["profile_image"],
       isBlocked: json["is_blocked"],
-      lastLoginAt: DateTime.tryParse(json["last_login_at"] ?? ""),
+      lastLoginAt: json["last_login_at"] != null 
+          ? DateTime.tryParse(json["last_login_at"].toString())
+          : null,
     );
   }
 
@@ -61,6 +68,7 @@ class UserModel {
     "first_name": firstName,
     "last_name": lastName,
     "phone": phone,
+    "profile_image": profileImage,
     "is_blocked": isBlocked,
     "last_login_at": lastLoginAt?.toIso8601String(),
   };

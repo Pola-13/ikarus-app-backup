@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:ikarusapp/core/constants/app_constants.dart';
 import 'package:ikarusapp/core/constants/app_routs.dart';
@@ -62,80 +63,140 @@ class LoginViewModel extends StateNotifier<BaseState<List<FormError>>>
   Future<void> logIn({required String email, required String password}) async {
     _startLoading();
 
-    BaseApiResult<UserData?> result = await _userRepositoryImpl.login(
-      email,
-      password,
-    );
-    _hideLoading();
+    try {
+      BaseApiResult<UserData?> result = await _userRepositoryImpl.login(
+        email,
+        password,
+      );
+      _hideLoading();
 
-    if (result.data != null) {
-      var user = result.data;
+      // Debug logging
+      debugPrint('🔍 Login Result - Status: ${result.status}');
+      debugPrint('🔍 Login Result - Has Data: ${result.data != null}');
+      debugPrint('🔍 Login Result - Has Token: ${result.data?.token != null}');
+      debugPrint('🔍 Login Result - Error Message: ${result.errorMessage}');
+      debugPrint('🔍 Login Result - Success Message: ${result.successMessage}');
+      debugPrint('🔍 Login Result - API Error: ${result.apiError?.message}');
 
-      ProviderScope.containerOf(
-        AppConstants.navigatorKey.currentContext!,
-      ).read(userProvider.notifier).setLocalUserData(user!);
-      navigateToScreen(Routes.root, removeTop: true);
-    } else {
-      // Check if error is related to incorrect password
-      bool isPasswordError = false;
-      
-      // First check errors map for password field errors
-      if (result.errors != null && result.errors!.isNotEmpty) {
-        final errors = result.errors!;
-        // Check if errors contain password-related keys
-        isPasswordError = errors.keys.any((key) => 
-          key.toLowerCase().contains('password') ||
-          key.toLowerCase().contains('credentials')
-        );
+      if (result.data != null && result.data!.token != null) {
+        var user = result.data!;
+
+        // Save user data to local storage and state
+        ProviderScope.containerOf(
+          AppConstants.navigatorKey.currentContext!,
+        ).read(userProvider.notifier).setLocalUserData(user);
         
-        // Also check error values for password-related messages
-        if (!isPasswordError) {
-          errors.forEach((key, value) {
-            final errorStr = value.toString().toLowerCase();
-            if (errorStr.contains('password') ||
-                errorStr.contains('incorrect') ||
-                errorStr.contains('wrong') ||
-                errorStr.contains('invalid') ||
-                errorStr.contains('credentials')) {
-              isPasswordError = true;
-            }
-          });
+        // Don't show success toast message - just navigate directly
+        // if (result.successMessage != null) {
+        //   showToastMessage(result.successMessage!, isSuccess: true);
+        // }
+        
+        // Navigate to root/home screen
+        navigateToScreen(Routes.root, removeTop: true);
+      } else {
+        // Debug: Log why login failed
+        if (result.data == null) {
+          debugPrint('❌ Login failed: result.data is null');
+        } else if (result.data!.token == null) {
+          debugPrint('❌ Login failed: token is null');
         }
+        
+        // Handle error response
+        _handleLoginError(result);
       }
+    } catch (e, stackTrace) {
+      _hideLoading();
+      debugPrint('❌ Login Exception: $e');
+      debugPrint('❌ Stack Trace: $stackTrace');
+      showToastMessage("An unexpected error occurred. Please try again.");
+    }
+  }
+
+  void _handleLoginError(BaseApiResult<UserData?> result) {
+    bool isPasswordError = false;
+    bool isEmailError = false;
+    List<FormError> errors = [];
+    
+    // Helper function to extract error message from value
+    String _extractErrorMessage(dynamic value) {
+      if (value is List) {
+        return value.isNotEmpty ? value.first.toString() : value.toString();
+      } else {
+        return value.toString();
+      }
+    }
+    
+    // Check errors map for field-specific errors
+    if (result.errors != null && result.errors!.isNotEmpty) {
+      final errorMap = result.errors!;
       
-      // Also check error message
-      if (!isPasswordError) {
-        final errorMessage = result.errorMessage?.toLowerCase() ?? "";
-        isPasswordError = errorMessage.contains('password') ||
-            errorMessage.contains('incorrect') ||
-            errorMessage.contains('invalid') ||
-            errorMessage.contains('wrong') ||
-            errorMessage.contains('credentials');
+      errorMap.forEach((key, value) {
+        final keyLower = key.toLowerCase();
+        final errorMessage = _extractErrorMessage(value);
+        final errorLower = errorMessage.toLowerCase();
+        
+        // Check for email errors
+        if (keyLower.contains('email') || 
+            keyLower.contains('user') ||
+            errorLower.contains('email') ||
+            errorLower.contains('user not found') ||
+            errorLower.contains('user does not exist')) {
+          isEmailError = true;
+          errors.add(FormError(
+            field: UserFields.email.field,
+            message: errorMessage,
+          ));
+        }
+        
+        // Check for password errors
+        if (keyLower.contains('password') ||
+            keyLower.contains('credentials') ||
+            errorLower.contains('password') ||
+            errorLower.contains('incorrect') ||
+            errorLower.contains('wrong') ||
+            errorLower.contains('invalid credentials')) {
+          isPasswordError = true;
+          errors.add(FormError(
+            field: UserFields.password.field,
+            message: errorMessage,
+          ));
+        }
+      });
+    }
+    
+    // If no specific field errors found, check error message
+    if (!isPasswordError && !isEmailError && result.errorMessage != null) {
+      final errorMessage = result.errorMessage!.toLowerCase();
+      
+      if (errorMessage.contains('password') ||
+          errorMessage.contains('incorrect') ||
+          errorMessage.contains('wrong') ||
+          errorMessage.contains('invalid credentials')) {
+        isPasswordError = true;
+        errors.add(FormError(
+          field: UserFields.password.field,
+          message: result.errorMessage!,
+        ));
+      } else if (errorMessage.contains('email') ||
+          errorMessage.contains('user not found') ||
+          errorMessage.contains('user does not exist')) {
+        isEmailError = true;
+        errors.add(FormError(
+          field: UserFields.email.field,
+          message: result.errorMessage!,
+        ));
+      } else {
+        // Generic error - show as toast
+        showToastMessage(result.errorMessage!);
       }
-
-      if (isPasswordError) {
-        // Add password field error
-        state = state.copyWith(
-          data: [
-            FormError(
-              field: UserFields.password.field,
-              message: "Incorrect password. Please try again",
-            ),
-          ],
-        );
-      } 
-      // else {
-      //   // Show other errors as toast
-      //   showToastMessage(result.errorMessage ?? "Something went wrong");
-      // }
-
-      // state = state.copyWith(formErrors: result.errors);
-      // if (result.errors?.isEmpty ?? true) {
-      //   handleError(
-      //     errorType: result.errorType ?? ApiErrorType.generalError,
-      //     errorMessage: result.errorMessage,
-      //   );
-      // }
+    }
+    
+    // Update state with form errors if any
+    if (errors.isNotEmpty) {
+      state = state.copyWith(data: errors);
+    } else if (result.errorMessage != null && !isPasswordError && !isEmailError) {
+      // Show generic error as toast if no field-specific errors
+      showToastMessage(result.errorMessage!);
     }
   }
 

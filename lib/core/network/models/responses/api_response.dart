@@ -1,5 +1,6 @@
-
+import 'package:flutter/material.dart';
 import 'package:ikarusapp/core/extensions/json_parser.dart';
+import 'package:ikarusapp/features/authentication_management/data/models/user_data.dart';
 
 class ApiResponse<T> {
   final bool? isSuccessful;
@@ -23,9 +24,12 @@ class ApiResponse<T> {
     
     // Extract message - can be string or object with title/message
     String? message;
+    String? messageTitle;
     if (json['message'] != null) {
       if (json['message'] is Map) {
-        message = json['message']['message'] as String?;
+        final messageMap = json['message'] as Map<String, dynamic>;
+        message = messageMap['message'] as String?;
+        messageTitle = messageMap['title'] as String?;
       } else if (json['message'] is String) {
         message = json['message'] as String?;
       }
@@ -33,20 +37,52 @@ class ApiResponse<T> {
     
     // Extract data
     T? data;
-    if (json['data'] != null && json['data'] is Map) {
-      data = (json['data'] as Map<String, dynamic>).parse<T>();
+    if (json['data'] != null) {
+      if (json['data'] is Map) {
+        final dataMap = json['data'] as Map<String, dynamic>;
+        
+        // Check if T is UserData or UserData? and parse directly
+        final typeString = T.toString();
+        if (typeString.contains('UserData')) {
+          try {
+            debugPrint('🔍 Parsing UserData directly from: ${dataMap.keys.toList()}');
+            data = UserData.fromJson(dataMap) as T?;
+            debugPrint('🔍 Parsed UserData: token=${(data as UserData?)?.token}, user=${(data as UserData?)?.user?.email}');
+          } catch (e, stackTrace) {
+            debugPrint('❌ Error parsing UserData directly: $e');
+            debugPrint('❌ Stack trace: $stackTrace');
+          }
+        } else {
+          // Try generic parsing for other types
+          try {
+            data = dataMap.parse<T>();
+            if (data == null) {
+              debugPrint('⚠️ Generic parse returned null for type: $typeString');
+            }
+          } catch (e) {
+            debugPrint('⚠️ Error in generic parsing: $e');
+          }
+        }
+      } else if (json['data'] is List && T.toString().contains('List')) {
+        // Handle list data if needed
+        data = json['data'] as T?;
+      }
+    } else {
+      debugPrint('⚠️ json[data] is null');
     }
     
     // Extract errors
     Map<String, dynamic>? errors;
-    if (json['errors'] != null && json['errors'] is Map) {
-      errors = json['errors'] as Map<String, dynamic>;
+    if (json['errors'] != null) {
+      if (json['errors'] is Map) {
+        errors = json['errors'] as Map<String, dynamic>;
+      }
     }
 
     return ApiResponse<T>(
       isSuccessful: isSuccessful,
       responseCode: responseCode,
-      message: message,
+      message: message ?? messageTitle,
       data: data,
       errors: errors,
     );

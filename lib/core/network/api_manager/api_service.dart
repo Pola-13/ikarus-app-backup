@@ -50,8 +50,8 @@ abstract class ApiService {
     double Function(double)? onSendProgress,
     bool isFormData = false,
   }) async {
-    debugPrint(url);
-    debugPrint(data.toString());
+    debugPrint('📤 POST Request to: $url');
+    debugPrint('📤 Request data: $data');
     try {
       Response response = await requesterDio.post(
         url,
@@ -69,10 +69,25 @@ abstract class ApiService {
         ),
       );
 
-      debugPrint(response.toString());
+      debugPrint('✅ Response received - Status: ${response.statusCode}');
+      debugPrint('✅ Response data type: ${response.data.runtimeType}');
+      if (response.data is Map) {
+        debugPrint('✅ Response keys: ${(response.data as Map).keys.toList()}');
+      }
       return handleResponse<T>(response);
     } on DioException catch (error) {
+      debugPrint('❌ DioException caught in post method');
+      debugPrint('❌ Exception type: ${error.type}');
+      debugPrint('❌ Response status: ${error.response?.statusCode}');
+      debugPrint('❌ Response data: ${error.response?.data}');
+      debugPrint('❌ Error message: ${error.message}');
       return catchError(error);
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error in post: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
+      return BaseApiResult<T>(
+        errorMessage: "Unexpected error: ${e.toString()}",
+      );
     }
   }
 
@@ -155,9 +170,62 @@ abstract class ApiService {
   }
 
   BaseApiResult<E> catchError<E>(DioException dioError) {
+    // Check if this is actually a successful response that was caught as an error
+    final statusCode = dioError.response?.statusCode;
+    final responseData = dioError.response?.data;
+    
+    debugPrint('🔍 DioException caught - Type: ${dioError.type}');
+    debugPrint('🔍 DioException Status Code: $statusCode');
+    debugPrint('🔍 DioException Response Data Type: ${responseData.runtimeType}');
+    debugPrint('🔍 DioException Response Data: $responseData');
+    
+    // If we have a response with data, check if it's actually successful
+    if (responseData != null && responseData is Map<String, dynamic>) {
+      // Check if the response indicates success
+      final isSuccessful = responseData['is_successful'] == true;
+      final hasData = responseData['data'] != null;
+      
+      debugPrint('🔍 Response is_successful: $isSuccessful');
+      debugPrint('🔍 Response has data: $hasData');
+      
+      // If the response is successful (either by status code or is_successful flag), try to parse it
+      if ((statusCode != null && statusCode >= 200 && statusCode < 300) || isSuccessful) {
+        debugPrint('⚠️ Successful response caught as DioException, attempting to parse...');
+        
+        final response = Response(
+          data: responseData,
+          statusCode: statusCode ?? 200,
+          requestOptions: dioError.requestOptions,
+        );
+        
+        // Try to parse as successful response
+        try {
+          final result = handleResponse<E>(response);
+          debugPrint('🔍 Parse result - Has data: ${result.data != null}');
+          debugPrint('🔍 Parse result - Error message: ${result.errorMessage}');
+          
+          if (result.data != null) {
+            debugPrint('✅ Successfully parsed response from DioException');
+            return result;
+          } else if (isSuccessful && hasData) {
+            // If is_successful is true but data is null, it means parsing failed
+            debugPrint('⚠️ is_successful is true but data parsing returned null');
+            // Return the result anyway, let the view model handle it
+            return result;
+          }
+        } catch (e, stackTrace) {
+          debugPrint('❌ Failed to parse response from DioException: $e');
+          debugPrint('❌ Stack trace: $stackTrace');
+        }
+      }
+    }
+    
+    // If we couldn't parse it as successful, return the error
+    final apiError = ApiExceptions.handleError(dioError);
+    debugPrint('❌ Returning error: ${apiError.message}');
     return BaseApiResult(
-      errorMessage: ApiExceptions.handleError(dioError).message,
-      apiError: ApiExceptions.handleError(dioError),
+      errorMessage: apiError.message,
+      apiError: apiError,
     );
   }
 

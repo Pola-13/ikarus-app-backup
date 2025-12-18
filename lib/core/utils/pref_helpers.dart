@@ -6,6 +6,7 @@ class PrefHelpers {
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   static const String _tokenKey = 'auth_token';
+  static const String _refreshTokenKey = 'refresh_token';
   static const String _splashShownKey = 'splash_shown';
 
   // SAVE TOKEN
@@ -22,7 +23,19 @@ class PrefHelpers {
   // CLEAR TOKEN
   static Future<void> clearToken() async {
     await _storage.delete(key: _tokenKey);
+    await _storage.delete(key: _refreshTokenKey);
     print('🧹 Secure token cleared');
+  }
+
+  // SAVE REFRESH TOKEN
+  static Future<void> saveRefreshToken(String refreshToken) async {
+    await _storage.write(key: _refreshTokenKey, value: refreshToken);
+    print('🔐 Refresh token saved');
+  }
+
+  // GET REFRESH TOKEN
+  static Future<String?> getRefreshToken() async {
+    return await _storage.read(key: _refreshTokenKey);
   }
 
   // SPLASH SCREEN HELPERS

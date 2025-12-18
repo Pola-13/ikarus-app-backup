@@ -19,15 +19,35 @@ class UserRemoteDataSource {
 
   // Login method
   Future<BaseApiResult<UserData>> login(String email, String password) async {
-    final response = await apiService.post<UserData>(
-      ApiUrls.login,
-      data: {'email': email, 'password': password},
-    );
-    final user = response.data;
-    if (user?.token != null) {
-      await PrefHelpers.saveToken(user!.token!);
+    try {
+      final response = await apiService.post<UserData>(
+        ApiUrls.login,
+        data: {'email': email, 'password': password},
+        hasToken: false, // Login doesn't require token
+      );
+      
+      // Save token and refresh token if login is successful
+      final user = response.data;
+      if (user?.token != null) {
+        await PrefHelpers.saveToken(user!.token!);
+        // Save refresh token if available
+        if (user.refreshToken != null) {
+          await PrefHelpers.saveRefreshToken(user.refreshToken!);
+        }
+      }
+      
+      return response;
+    } on DioException catch (e) {
+      // Dio exceptions are already handled by ApiService, but we can add additional handling here if needed
+      return BaseApiResult<UserData>(
+        errorMessage: "Login failed. Please check your credentials.",
+        apiError: ApiExceptions.handleError(e),
+      );
+    } catch (e) {
+      return BaseApiResult<UserData>(
+        errorMessage: "An unexpected error occurred: ${e.toString()}",
+      );
     }
-    return response;
   }
 
   // SignUp method
@@ -36,12 +56,18 @@ class UserRemoteDataSource {
       final response = await apiService.post<SignupProfile>(
         ApiUrls.signup,
         data: data,
+        hasToken: false, // Signup doesn't require token
       );
       return response;
-    } on DioError catch (e) {
-      throw ApiExceptions.handleError(e);
+    } on DioException catch (e) {
+      return BaseApiResult<SignupProfile>(
+        errorMessage: "Signup failed. Please try again.",
+        apiError: ApiExceptions.handleError(e),
+      );
     } catch (e) {
-      throw ApiError(message: e.toString());
+      return BaseApiResult<SignupProfile>(
+        errorMessage: "An unexpected error occurred: ${e.toString()}",
+      );
     }
   }
 

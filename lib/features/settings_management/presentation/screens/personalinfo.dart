@@ -1,46 +1,38 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:ikarusapp/core/constants/colors.dart';
 import 'package:ikarusapp/core/constants/device.dart';
 import 'package:ikarusapp/core/constants/font_family.dart';
+import 'package:ikarusapp/core/injection/user_injection.dart';
 import 'package:ikarusapp/features/base/presentation/widgets/Appbar/addfunds_appbar.dart';
 import 'package:ikarusapp/features/base/presentation/widgets/deleteaccount.dart';
 import 'package:ikarusapp/features/base/presentation/widgets/logout.dart';
 
 // Reused signup widgets
-import 'package:ikarusapp/features/authentication_management/presentation/widgets/name_section.dart';
-import 'package:ikarusapp/features/authentication_management/presentation/widgets/phone_section.dart';
-import 'package:ikarusapp/features/authentication_management/presentation/widgets/dropdown_section.dart';
+import 'package:ikarusapp/features/authentication_management/presentation/widgets/readonly_name_section.dart';
+import 'package:ikarusapp/features/authentication_management/presentation/widgets/readonly_email_field.dart';
+import 'package:ikarusapp/features/authentication_management/presentation/widgets/readonly_phone_section.dart';
+import 'package:ikarusapp/features/authentication_management/presentation/widgets/readonly_location_section.dart';
 import 'package:ikarusapp/features/authentication_management/presentation/widgets/car_model_section.dart';
 
-class ManagePersonalInfoPage extends StatefulWidget {
+class ManagePersonalInfoPage extends ConsumerStatefulWidget {
   const ManagePersonalInfoPage({super.key});
 
   @override
-  State<ManagePersonalInfoPage> createState() =>
+  ConsumerState<ManagePersonalInfoPage> createState() =>
       _ManagePersonalInfoPageState();
 }
 
-class _ManagePersonalInfoPageState extends State<ManagePersonalInfoPage> {
-  // ---------------- IMAGE ----------------
+class _ManagePersonalInfoPageState extends ConsumerState<ManagePersonalInfoPage> {
+  // ---------------- IMAGE ---------------- 
   File? _profileImage;
 
   // ---------------- CONTROLLERS ----------------
-  final _firstNameCtrl = TextEditingController(text: "Ahmed");
-  final _lastNameCtrl = TextEditingController(text: "Ali");
-  final _emailCtrl = TextEditingController(text: "Ahmed@gmail.com");
-  final _phoneCtrl = TextEditingController(text: "1206018529");
-  final _carModelCtrl = TextEditingController(text: "Nissan Sunny 2016");
-
-  // ---------------- DROPDOWN STATE ----------------
-  // Note: DropdownSection now manages its own state through LocationViewModel
-  // These variables can be used to track changes if needed
-  String? _selectedCountryCode;
-  String? _selectedCityId;
-  String? _selectedDistrictId;
+  final _carModelCtrl = TextEditingController();
 
   // ---------------- IMAGE PICK ----------------
   Future<void> pickImage() async {
@@ -62,11 +54,16 @@ class _ManagePersonalInfoPageState extends State<ManagePersonalInfoPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Load profile data when page is opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(profileViewModelProvider.notifier).loadProfile();
+    });
+  }
+
+  @override
   void dispose() {
-    _firstNameCtrl.dispose();
-    _lastNameCtrl.dispose();
-    _emailCtrl.dispose();
-    _phoneCtrl.dispose();
     _carModelCtrl.dispose();
     super.dispose();
   }
@@ -75,70 +72,85 @@ class _ManagePersonalInfoPageState extends State<ManagePersonalInfoPage> {
   Widget build(BuildContext context) {
     final screenWidth = Device.deviceWidth(context: context);
     final screenHeight = Device.deviceHeight(context: context);
+    final profileState = ref.watch(profileViewModelProvider);
 
     return SafeArea(
       child: Scaffold(
         backgroundColor: AppColors.whiteColor,
         appBar: buildAppBar(context, "Manage Personal Info"),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.05,
-            vertical: screenHeight * 0.03,
-          ),
-          child: Column(
-            children: [
-              avatarSection(screenWidth, screenHeight),
-              SizedBox(height: screenHeight * 0.04),
+        body: profileState.isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+                ),
+              )
+            : profileState.error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          profileState.error!,
+                          style: TextStyle(color: AppColors.statusRedColor),
+                        ),
+                        SizedBox(height: screenHeight * 0.02),
+                        ElevatedButton(
+                          onPressed: () {
+                            ref.read(profileViewModelProvider.notifier).loadProfile();
+                          },
+                          child: Text("Retry"),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.05,
+                      vertical: screenHeight * 0.03,
+                    ),
+                    child: Column(
+                      children: [
+                        avatarSection(screenWidth, screenHeight),
+                        SizedBox(height: screenHeight * 0.04),
 
-              // -------- NAME --------
-              NameSection(
-                firstNameController: _firstNameCtrl,
-                lastNameController: _lastNameCtrl,
-              ),
-              SizedBox(height: screenHeight * 0.025),
+                        // -------- NAME --------
+                        ReadOnlyNameSection(
+                          firstName: profileState.profile?.customer?.firstName ?? "",
+                          lastName: profileState.profile?.customer?.lastName ?? "",
+                        ),
+                        SizedBox(height: screenHeight * 0.025),
 
-              // -------- EMAIL --------
-              _emailField(screenWidth, screenHeight),
-              SizedBox(height: screenHeight * 0.025),
+                        // -------- EMAIL --------
+                        ReadOnlyEmailField(
+                          email: profileState.profile?.customer?.email ?? "",
+                        ),
+                        SizedBox(height: screenHeight * 0.025),
 
-              // -------- PHONE --------
-              PhoneSection(phoneController: _phoneCtrl),
-              SizedBox(height: screenHeight * 0.025),
+                        // -------- PHONE --------
+                        ReadOnlyPhoneSection(
+                          phoneNumber: profileState.profile?.customer?.phoneE164 ?? "",
+                        ),
+                        SizedBox(height: screenHeight * 0.025),
 
-              // -------- LOCATION --------
-              DropdownSection(
-                onCountryChanged: (val) {
-                  setState(() {
-                    _selectedCountryCode = val;
-                    _selectedCityId = null;
-                    _selectedDistrictId = null;
-                  });
-                },
-                onGovernorateChanged: (val) {
-                  setState(() {
-                    _selectedCityId = val;
-                    _selectedDistrictId = null;
-                  });
-                },
-                onDistrictChanged: (val) {
-                  setState(() {
-                    _selectedDistrictId = val;
-                  });
-                },
-              ),
-              SizedBox(height: screenHeight * 0.03),
+                        // -------- LOCATION --------
+                        ReadOnlyLocationSection(
+                          country: profileState.profile?.customer?.country,
+                          city: profileState.profile?.customer?.city,
+                          district: profileState.profile?.customer?.district,
+                        ),
+                        SizedBox(height: screenHeight * 0.03),
 
-              // -------- CAR MODEL --------
-              CarModelSection(carModelController: _carModelCtrl),
-              SizedBox(height: screenHeight * 0.05),
+                        // -------- CAR MODEL --------
+                        CarModelSection(carModelController: _carModelCtrl),
+                        SizedBox(height: screenHeight * 0.05),
 
-              // -------- ACTIONS --------
-              LogoutButton(),
-              SizedBox(height: screenHeight * 0.02),
-              DeleteAccountButton(),
-            ],
-          ),
-        ),
+                        // -------- ACTIONS --------
+                        LogoutButton(),
+                        SizedBox(height: screenHeight * 0.02),
+                        DeleteAccountButton(),
+                      ],
+                    ),
+                  ),
       ),
     );
   }
@@ -188,36 +200,6 @@ class _ManagePersonalInfoPageState extends State<ManagePersonalInfoPage> {
                 size: screenWidth * 0.035,
                 color: AppColors.tealColor,
               ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ---------------- EMAIL FIELD ----------------
-  Widget _emailField(double screenWidth, double screenHeight) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Email",
-          style: TextStyle(
-            fontSize: screenWidth * 0.042,
-            fontFamily: FontFamily.appFontFamily,
-            color: AppColors.primaryColor,
-          ),
-        ),
-        SizedBox(height: screenHeight * 0.008),
-        TextFormField(
-          controller: _emailCtrl,
-          keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.neutral50Color,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(screenWidth * 0.03),
-              borderSide: BorderSide.none,
             ),
           ),
         ),

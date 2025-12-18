@@ -6,6 +6,7 @@ import 'package:ikarusapp/features/authentication_management/data/data_source/us
 import 'package:ikarusapp/features/authentication_management/data/data_source/user_remote_data_source.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/user_data.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/signup_profile.dart';
+import 'package:ikarusapp/features/authentication_management/data/models/user_profile_response.dart';
 
 class UserRepositoryImpl {
   UserRemoteDataSource userRemoteDataSource;
@@ -47,7 +48,7 @@ class UserRepositoryImpl {
     return userLocalDataSource.getUser();
   }
 
-  // Future<BaseApiResult<ProfileResponse>> fetchProfile() {
-  //   return userRemoteDataSource.fetchProfile();
-  // }
+  Future<BaseApiResult<UserProfileResponse>> getUserProfile() {
+    return userRemoteDataSource.getUserProfile();
+  }
 }

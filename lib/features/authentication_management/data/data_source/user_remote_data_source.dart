@@ -9,6 +9,7 @@ import 'package:ikarusapp/core/utils/pref_helpers.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/user_data.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/usermodel.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/signup_profile.dart';
+import 'package:ikarusapp/features/authentication_management/data/models/user_profile_response.dart';
 
 class UserRemoteDataSource {
   // Example method to demonstrate usage of ApiService
@@ -71,10 +72,24 @@ class UserRemoteDataSource {
     }
   }
 
-  // get profile data
-  Future<dynamic> getProfile() async {
-    final response = await apiService.get('/profile');
-    return response;
+  // Get user profile data
+  Future<BaseApiResult<UserProfileResponse>> getUserProfile() async {
+    try {
+      final response = await apiService.get<UserProfileResponse>(
+        ApiUrls.userProfile,
+        hasToken: true, // User profile requires authentication token
+      );
+      return response;
+    } on DioException catch (e) {
+      return BaseApiResult<UserProfileResponse>(
+        errorMessage: "Failed to load profile. Please try again.",
+        apiError: ApiExceptions.handleError(e),
+      );
+    } catch (e) {
+      return BaseApiResult<UserProfileResponse>(
+        errorMessage: "An unexpected error occurred: ${e.toString()}",
+      );
+    }
   }
 
   //update profile data

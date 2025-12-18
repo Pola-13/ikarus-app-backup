@@ -8,6 +8,7 @@ import 'package:ikarusapp/features/authentication_management/data/models/user_da
 import 'package:ikarusapp/features/authentication_management/data/repositories/user_repository_impl.dart';
 import 'package:ikarusapp/features/authentication_management/presentation/view_models/signup_view_model.dart';
 import 'package:ikarusapp/features/authentication_management/presentation/view_models/user_view_model.dart';
+import 'package:ikarusapp/features/authentication_management/presentation/view_models/profile_view_model.dart';
 import 'package:ikarusapp/features/base/data/entities/base_state.dart';
 import 'package:ikarusapp/features/base/data/entities/form_error.dart';
 
@@ -36,3 +37,7 @@ final signupViewModelProvider =
     StateNotifierProvider<SignupViewModel, BaseState<List<FormError>>>((ref) {
       return SignupViewModel(ref.read(userRepositoryProvider));
     });
+
+final profileViewModelProvider = StateNotifierProvider<ProfileViewModel, ProfileState>((ref) {
+  return ProfileViewModel(ref.read(userRepositoryProvider));
+});

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ikarusapp/core/extensions/json_parser.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/user_data.dart';
+import 'package:ikarusapp/features/authentication_management/data/models/user_profile_response.dart';
 
 class ApiResponse<T> {
   final bool? isSuccessful;
@@ -41,9 +42,18 @@ class ApiResponse<T> {
       if (json['data'] is Map) {
         final dataMap = json['data'] as Map<String, dynamic>;
         
-        // Check if T is UserData or UserData? and parse directly
+        // Check if T is UserData, UserProfileResponse or UserData? and parse directly
         final typeString = T.toString();
-        if (typeString.contains('UserData')) {
+        if (typeString.contains('UserProfileResponse')) {
+          try {
+            debugPrint('🔍 Parsing UserProfileResponse directly from: ${dataMap.keys.toList()}');
+            data = UserProfileResponse.fromJson(dataMap) as T?;
+            debugPrint('🔍 Parsed UserProfileResponse: customer=${(data as UserProfileResponse?)?.customer?.email}');
+          } catch (e, stackTrace) {
+            debugPrint('❌ Error parsing UserProfileResponse directly: $e');
+            debugPrint('❌ Stack trace: $stackTrace');
+          }
+        } else if (typeString.contains('UserData') && !typeString.contains('UserProfileResponse')) {
           try {
             debugPrint('🔍 Parsing UserData directly from: ${dataMap.keys.toList()}');
             data = UserData.fromJson(dataMap) as T?;
@@ -61,6 +71,14 @@ class ApiResponse<T> {
             }
           } catch (e) {
             debugPrint('⚠️ Error in generic parsing: $e');
+            // Fallback for UserProfileResponse
+            if (typeString.contains('UserProfileResponse')) {
+              try {
+                data = UserProfileResponse.fromJson(dataMap) as T?;
+              } catch (e2) {
+                debugPrint('❌ Fallback parsing UserProfileResponse also failed: $e2');
+              }
+            }
           }
         }
       } else if (json['data'] is List && T.toString().contains('List')) {

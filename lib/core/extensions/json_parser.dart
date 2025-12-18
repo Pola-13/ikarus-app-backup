@@ -1,6 +1,7 @@
 import 'package:ikarusapp/features/authentication_management/data/models/user_data.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/usermodel.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/signup_profile.dart';
+import 'package:ikarusapp/features/authentication_management/data/models/user_profile_response.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/country_model.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/city_model.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/district_model.dart';
@@ -15,6 +16,8 @@ extension JsonParser on Map<String, dynamic> {
         return UserModel.fromJson(this) as V;
       case const (SignupProfile):
         return SignupProfile.fromJson(this) as V;
+      case const (UserProfileResponse):
+        return UserProfileResponse.fromJson(this) as V;
       case const (CountryModel):
         return CountryModel.fromJson(this) as V;
       case const (CityModel):

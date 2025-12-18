@@ -155,10 +155,10 @@ class _StationListState extends State<StationList> {
                                       MaterialTapTargetSize.shrinkWrap,
                                 ),
                                 child:  Text(
-                                  station.status ?? "",
+                                  "open",
                                   style: TextStyle(
                                     color: AppColors.tealColor,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w800,
                                     fontSize: 14,
                                     fontFamily: FontFamily.appFontFamily,
                                   ),

@@ -6,6 +6,7 @@ import 'package:ikarusapp/core/network/models/responses/api_response.dart';
 import 'package:ikarusapp/core/network/models/responses/base_api_result.dart';
 import 'package:ikarusapp/core/network/models/responses/list_response.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/user_data.dart';
+import 'package:ikarusapp/features/authentication_management/data/models/user_profile_response.dart';
 
 import 'api_service.dart';
 
@@ -132,13 +133,16 @@ class ApiServiceImpl extends ApiService {
                 final dataMap = responseData['data'] as Map<String, dynamic>;
                 debugPrint('🔍 Attempting manual parse with data keys: ${dataMap.keys.toList()}');
                 
-                // Check if T is UserData and parse directly
+                // Check if T is UserData or UserProfileResponse and parse directly
                 final typeString = T.toString();
                 T? parsedData;
                 
-                if (typeString.contains('UserData')) {
+                if (typeString.contains('UserData') && !typeString.contains('UserProfileResponse')) {
                   debugPrint('🔍 Manual parsing UserData directly');
                   parsedData = UserData.fromJson(dataMap) as T?;
+                } else if (typeString.contains('UserProfileResponse')) {
+                  debugPrint('🔍 Manual parsing UserProfileResponse directly');
+                  parsedData = UserProfileResponse.fromJson(dataMap) as T?;
                 } else {
                   parsedData = dataMap.parse<T>();
                 }

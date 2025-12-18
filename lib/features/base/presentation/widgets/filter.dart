@@ -33,7 +33,7 @@ class _FilterSheetState extends State<FilterSheet> {
     return true;
   }
 
-  // POWER LOGIC ✔
+  // POWER LOGIC
   bool _isPowerEnabled(String label) {
     if (ac && !dc) {
       return label == "Less than 60 kW"; // ONLY this one enabled
@@ -85,7 +85,7 @@ class _FilterSheetState extends State<FilterSheet> {
                       style: TextStyle(
                         color: AppColors.tealColor,
                         fontWeight: FontWeight.w900,
-                        fontSize: screenWidth * 0.038,
+                        fontSize: 14,                  
                       ),
                     ),
                   ),
@@ -93,11 +93,11 @@ class _FilterSheetState extends State<FilterSheet> {
                     "Filter Charges",
                     style: TextStyle(
                       fontSize: screenWidth * 0.045,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close, size: screenWidth * 0.06),
+                    icon: Icon(Icons.close, color: AppColors.netural400Color ,size: screenWidth * 0.06),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -117,7 +117,7 @@ class _FilterSheetState extends State<FilterSheet> {
                     'Charge Type',
                     style: TextStyle(
                       fontSize: screenWidth * 0.04,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.01),
@@ -170,14 +170,14 @@ class _FilterSheetState extends State<FilterSheet> {
                     'Power',
                     style: TextStyle(
                       fontSize: screenWidth * 0.04,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.01),
 
                   // LESS THAN 60 – ALWAYS CLICKABLE WHEN AC
                   IconCheckbox(
-                    label: "Less than 60 kW",
+                    label: "Less than 60 Kw",
                     value: less_than_60,
                     enabled: _isPowerEnabled("Less than 60 kW"),
                     onChanged: (v) => setState(() => less_than_60 = v),
@@ -189,7 +189,7 @@ class _FilterSheetState extends State<FilterSheet> {
                   Opacity(
                     opacity: _isPowerEnabled("60 kW") ? 1.0 : 0.35,
                     child: IconCheckbox(
-                      label: "60 kW",
+                      label: "60 Kw",
                       value: value_60,
                       enabled: _isPowerEnabled("60 kW"),
                       onChanged: (v) => setState(() => value_60 = v),
@@ -200,7 +200,7 @@ class _FilterSheetState extends State<FilterSheet> {
 
                   // MORE THAN 60 – DIMMED + DISABLED WHEN AC
                   Opacity(
-                    opacity: _isPowerEnabled("More than 60 kW") ? 1.0 : 0.35,
+                    opacity: _isPowerEnabled("More than 60 Kw") ? 1.0 : 0.35,
                     child: IconCheckbox(
                       label: "More than 60 kW",
                       value: more_than_60,
@@ -217,8 +217,8 @@ class _FilterSheetState extends State<FilterSheet> {
                   Text(
                     'Connector Type',
                     style: TextStyle(
-                      fontSize: screenWidth * 0.04,
-                      fontWeight: FontWeight.w600,
+                      fontSize: screenWidth * 0.043,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
 

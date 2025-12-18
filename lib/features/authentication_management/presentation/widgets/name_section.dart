@@ -32,7 +32,7 @@ class NameSection extends StatelessWidget {
             children: [
               LabeledField(
                 label: "First Name",
-                hint: "ahmed",
+                hint: "ex: ahmed",
                 controller: firstNameController,
               ),
               if (firstNameError != null)
@@ -60,7 +60,7 @@ class NameSection extends StatelessWidget {
             children: [
               LabeledField(
                 label: "Last Name",
-                hint: "ali",
+                hint: "ex: ali",
                 controller: lastNameController,
               ),
               if (lastNameError != null)

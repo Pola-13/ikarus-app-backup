@@ -234,7 +234,7 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
-            hintText: "email@email.com",
+            hintText: "ex: email@email.com",
             hintStyle: TextStyle(
               color: AppColors.netural600Color,
               fontSize: screenWidth * 0.035,

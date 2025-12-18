@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ikarusapp/core/constants/app_routs.dart';
 import 'package:ikarusapp/core/constants/colors.dart';
 import 'package:ikarusapp/core/constants/device.dart';
 import 'package:ikarusapp/core/constants/font_family.dart';
-import 'package:ikarusapp/core/injection/user_injection.dart';
+import 'package:ikarusapp/core/utils/pref_helpers.dart';
 import 'package:ikarusapp/features/base/presentation/view_models/base_view_model.dart';
 
 class Splash extends StatefulWidget {
@@ -15,17 +14,13 @@ class Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<Splash> with BaseViewModel {
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(seconds: 1), () => _navigate());
-  }
-
-  _navigate() {
-    var userLoggedIn =
-        ProviderScope.containerOf(context).read(userProvider) != null;
+  _navigate() async {
+    // Mark splash as shown
+    await PrefHelpers.setSplashShown();
+    
+    // Navigate to login page
     navigateToScreen(
-      userLoggedIn ? Routes.root : Routes.login,
+      Routes.login,
       removeTop: true,
     );
   }

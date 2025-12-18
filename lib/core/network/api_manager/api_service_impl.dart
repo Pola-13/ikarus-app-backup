@@ -18,12 +18,36 @@ class ApiServiceImpl extends ApiService {
       return BaseApiResult<List<T>>(errorMessage: "Something went wrong");
     }
 
-    ListResponse<T> baseResponse = ListResponse<T>.fromJson(responseData);
+    if (responseData is Map<String, dynamic>) {
+      // New structure with is_successful and data.results
+      if (responseData.containsKey('is_successful')) {
+        ListResponse<T> baseResponse = ListResponse<T>.fromJson(responseData);
 
-    return BaseApiResult<List<T>>(
-      data: baseResponse.data,
-      successMessage: baseResponse.message,
-    );
+        if (baseResponse.isSuccessful == true) {
+          return BaseApiResult<List<T>>(
+            data: baseResponse.data,
+            successMessage: baseResponse.message,
+            status: 200,
+          );
+        } else {
+          return BaseApiResult<List<T>>(
+            errorMessage: baseResponse.message ?? "Something went wrong",
+            errors: baseResponse.errors,
+            status: response.statusCode,
+          );
+        }
+      }
+
+      // Fallback to old structure (results at root)
+      ListResponse<T> baseResponse = ListResponse<T>.fromJson(responseData);
+
+      return BaseApiResult<List<T>>(
+        data: baseResponse.data,
+        successMessage: baseResponse.message,
+      );
+    }
+
+    return BaseApiResult<List<T>>(errorMessage: "Something went wrong");
   }
 
   @override
@@ -31,7 +55,26 @@ class ApiServiceImpl extends ApiService {
     var responseData = response.data;
 
     if (responseData is Map<String, dynamic>) {
-      if (responseData['data'] != null) {
+      // Check if response has the new structure with is_successful
+      if (responseData.containsKey('is_successful')) {
+        ApiResponse<T> baseResponse = ApiResponse<T>.fromJson(responseData);
+        
+        if (baseResponse.isSuccessful == true) {
+          return BaseApiResult<T>(
+            data: baseResponse.data,
+            successMessage: baseResponse.message,
+            status: 200,
+          );
+        } else {
+          // Handle error case
+          return BaseApiResult<T>(
+            errorMessage: baseResponse.getErrorMessage() ?? "Something went wrong",
+            status: response.statusCode,
+            errors: baseResponse.errors,
+          );
+        }
+      } else if (responseData['data'] != null) {
+        // Fallback to old structure
         ApiResponse<T> baseResponse = ApiResponse<T>.fromJson(responseData);
 
         return BaseApiResult<T>(
@@ -41,7 +84,9 @@ class ApiServiceImpl extends ApiService {
       } else {
         return BaseApiResult<T>(
           data: responseData.parse<T>(),
-          successMessage: responseData['message'],
+          successMessage: responseData['message'] is String 
+              ? responseData['message'] as String?
+              : responseData['message']?['message'] as String?,
         );
       }
     }

@@ -7,12 +7,15 @@ enum UserFields {
   confirmNewPassword,
   emailOrPhone,
   mobile,
+  phone,
   month,
   establishmentNumber,
   birthDate,
   idNumber,
   gender,
   country,
+  city,
+  street,
   state;
 
   String get field {
@@ -33,6 +36,8 @@ enum UserFields {
         return 'emailOrPhone';
       case UserFields.mobile:
         return 'mobile';
+      case UserFields.phone:
+        return 'phone';
       case UserFields.month:
         return 'month';
       case UserFields.establishmentNumber:
@@ -45,6 +50,10 @@ enum UserFields {
         return 'gender';
       case UserFields.country:
         return 'country';
+      case UserFields.city:
+        return 'city';
+      case UserFields.street:
+        return 'street';
       case UserFields.state:
         return 'state';
       default:

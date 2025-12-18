@@ -8,6 +8,7 @@ import 'package:ikarusapp/core/network/models/responses/base_api_result.dart';
 import 'package:ikarusapp/core/utils/pref_helpers.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/user_data.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/usermodel.dart';
+import 'package:ikarusapp/features/authentication_management/data/models/signup_profile.dart';
 
 class UserRemoteDataSource {
   // Example method to demonstrate usage of ApiService
@@ -30,17 +31,12 @@ class UserRemoteDataSource {
   }
 
   // SignUp method
-  Future<BaseApiResult<UserData>> signup(Map<String, String> data) async {
+  Future<BaseApiResult<SignupProfile>> signup(Map<String, String> data) async {
     try {
-      final response = await apiService.post<UserData>(
+      final response = await apiService.post<SignupProfile>(
         ApiUrls.signup,
         data: data,
       );
-      final user = response.data;
-      if (user?.token != null) {
-        await PrefHelpers.saveToken(user!.token!);
-      }
-
       return response;
     } on DioError catch (e) {
       throw ApiExceptions.handleError(e);

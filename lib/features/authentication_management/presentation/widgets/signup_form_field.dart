@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:collection/collection.dart';
 import 'package:ikarusapp/core/constants/app_routs.dart';
 import 'package:ikarusapp/core/constants/colors.dart';
 import 'package:ikarusapp/core/constants/font_family.dart';
 import 'package:ikarusapp/core/constants/device.dart';
 import 'package:ikarusapp/core/injection/user_injection.dart';
+import 'package:ikarusapp/features/authentication_management/presentation/entities/user_fields.dart';
 import 'package:ikarusapp/features/authentication_management/presentation/widgets/car_model_section.dart';
 import 'package:ikarusapp/features/authentication_management/presentation/widgets/dropdown_section.dart';
 import 'package:ikarusapp/features/authentication_management/presentation/widgets/name_section.dart';
@@ -82,38 +84,107 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
         SizedBox(height: screenHeight * 0.02),
 
         //  NAME SECTION
-        NameSection(
-          firstNameController: _firstNameCtrl,
-          lastNameController: _lastNameCtrl,
+        Consumer(
+          builder: (context, ref, _) {
+            final errors = ref.watch(
+              signupViewModelProvider.select((value) => value.data),
+            );
+            return NameSection(
+              firstNameController: _firstNameCtrl,
+              lastNameController: _lastNameCtrl,
+              firstNameError: errors
+                  .firstWhereOrNull(
+                    (error) => error.field == UserFields.firstName.field,
+                  )
+                  ?.message,
+              lastNameError: errors
+                  .firstWhereOrNull(
+                    (error) => error.field == UserFields.lastName.field,
+                  )
+                  ?.message,
+            );
+          },
         ),
 
         SizedBox(height: screenHeight * 0.02),
 
         //  EMAIL FIELD
-        _emailField(screenWidth, screenHeight, _emailController),
+        Consumer(
+          builder: (context, ref, _) {
+            final errors = ref.watch(
+              signupViewModelProvider.select((value) => value.data),
+            );
+            return _emailField(
+              screenWidth,
+              screenHeight,
+              _emailController,
+              errors
+                  .firstWhereOrNull(
+                    (error) => error.field == UserFields.email.field,
+                  )
+                  ?.message,
+            );
+          },
+        ),
         SizedBox(height: screenHeight * 0.02),
 
         //  PHONE SECTION
-        PhoneSection(phoneController: _phoneController),
+        Consumer(
+          builder: (context, ref, _) {
+            final errors = ref.watch(
+              signupViewModelProvider.select((value) => value.data),
+            );
+            return PhoneSection(
+              phoneController: _phoneController,
+              errorMessage: errors
+                  .firstWhereOrNull(
+                    (error) => error.field == UserFields.phone.field,
+                  )
+                  ?.message,
+            );
+          },
+        ),
         SizedBox(height: screenHeight * 0.02),
 
         //  DROPDOWN SECTION
-        DropdownSection(
-          selectedCountry: _selectedCountry,
-          selectedGovernorate: _selectedGovernorate,
-          selectedDistrict: _selectedDistrict,
-          onCountryChanged: (val) {
-            setState(() {
-              _selectedCountry = val;
-              _selectedGovernorate = null;
-              _selectedDistrict = null;
-            });
-          },
-          onGovernorateChanged: (val) {
-            setState(() => _selectedGovernorate = val);
-          },
-          onDistrictChanged: (val) {
-            setState(() => _selectedDistrict = val);
+        Consumer(
+          builder: (context, ref, _) {
+            final errors = ref.watch(
+              signupViewModelProvider.select((value) => value.data),
+            );
+            return DropdownSection(
+              selectedCountry: _selectedCountry,
+              selectedGovernorate: _selectedGovernorate,
+              selectedDistrict: _selectedDistrict,
+              countryError: errors
+                  .firstWhereOrNull(
+                    (error) => error.field == UserFields.country.field,
+                  )
+                  ?.message,
+              cityError: errors
+                  .firstWhereOrNull(
+                    (error) => error.field == UserFields.city.field,
+                  )
+                  ?.message,
+              streetError: errors
+                  .firstWhereOrNull(
+                    (error) => error.field == UserFields.street.field,
+                  )
+                  ?.message,
+              onCountryChanged: (val) {
+                setState(() {
+                  _selectedCountry = val;
+                  _selectedGovernorate = null;
+                  _selectedDistrict = null;
+                });
+              },
+              onGovernorateChanged: (val) {
+                setState(() => _selectedGovernorate = val);
+              },
+              onDistrictChanged: (val) {
+                setState(() => _selectedDistrict = val);
+              },
+            );
           },
         ),
         SizedBox(height: screenHeight * 0.03),
@@ -145,6 +216,7 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
     double screenWidth,
     double screenHeight,
     TextEditingController emailController,
+    String? errorMessage,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +245,7 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
               horizontal: screenWidth * 0.035,
               vertical: screenHeight * 0.016,
             ),
-            border: OutlineInputBorder(
+            enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(screenWidth * 0.03),
               borderSide: BorderSide.none,
             ),
@@ -181,8 +253,32 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
               borderRadius: BorderRadius.circular(screenWidth * 0.03),
               borderSide: BorderSide(color: AppColors.tealColor, width: 1.4),
             ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(screenWidth * 0.03),
+              borderSide: BorderSide.none,
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(screenWidth * 0.03),
+              borderSide: BorderSide.none,
+            ),
+            errorText: null,
           ),
         ),
+        if (errorMessage != null)
+          Padding(
+            padding: EdgeInsets.only(
+              left: 0,
+              top: screenHeight * 0.005,
+            ),
+            child: Text(
+              errorMessage,
+              style: TextStyle(
+                color: AppColors.statusRedColor,
+                fontSize: screenWidth * 0.032,
+                fontFamily: FontFamily.appFontFamily,
+              ),
+            ),
+          ),
       ],
     );
   }

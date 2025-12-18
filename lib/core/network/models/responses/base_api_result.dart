@@ -8,6 +8,7 @@ class BaseApiResult<T> {
   final String? successMessage;
   final String? errorMessage;
   final ApiError? apiError;
+  final Map<String, dynamic>? errors;
 
   BaseApiResult({
     this.data,
@@ -15,5 +16,6 @@ class BaseApiResult<T> {
     this.successMessage,
     this.errorMessage,
     this.apiError,
+    this.errors,
   });
 }

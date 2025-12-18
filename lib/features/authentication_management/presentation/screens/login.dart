@@ -127,42 +127,71 @@ class _LoginState extends State<Login> {
                               _viewModelProvider.select((value) => value.data),
                             );
 
-                            return TextFormField(
-                              keyboardType: TextInputType.emailAddress,
-                              controller: emailController,
-                              decoration: InputDecoration(
-                                hintText: "ex: email@email.com",
-                                hintStyle: TextStyle(
-                                  color: AppColors.netural600Color,
-                                  fontSize: screenWidth * 0.035,
+                            final emailError = errors
+                                .firstWhereOrNull(
+                                  (error) =>
+                                      error.field ==
+                                      UserFields.email.field,
+                                )
+                                ?.message;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextFormField(
+                                  keyboardType: TextInputType.emailAddress,
+                                  controller: emailController,
+                                  decoration: InputDecoration(
+                                    hintText: "ex: email@email.com",
+                                    hintStyle: TextStyle(
+                                      color: AppColors.netural600Color,
+                                      fontSize: screenWidth * 0.035,
+                                    ),
+                                    filled: true,
+                                    fillColor: AppColors.neutral50Color,
+
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: screenWidth * 0.035,
+                                      vertical: screenHeight * 0.016,
+                                    ),
+
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+
+                                    errorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedErrorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    errorText: null,
+                                  ),
                                 ),
-                                filled: true,
-                                fillColor: AppColors.neutral50Color,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.035,
-                                  vertical: screenHeight * 0.016,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                errorText:
-                                    errors
-                                        .firstWhereOrNull(
-                                          (error) =>
-                                              error.field ==
-                                              UserFields.email.field,
-                                        )
-                                        ?.message,
-                              ),
+                                if (emailError != null)
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      left: 0,
+                                      top: screenHeight * 0.005,
+                                    ),
+                                    child: Text(
+                                      emailError,
+                                      style: TextStyle(
+                                        color: AppColors.statusRedColor,
+                                        fontSize: screenWidth * 0.032,
+                                        fontFamily: FontFamily.appFontFamily,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             );
                           },
                         ),
@@ -182,61 +211,88 @@ class _LoginState extends State<Login> {
                         SizedBox(height: screenHeight * 0.008),
 
                         // Password Field
+                        // Password Field
                         Consumer(
                           builder: (context, ref, _) {
-                            var errors = ref.watch(
+                            final errors = ref.watch(
                               _viewModelProvider.select((value) => value.data),
                             );
 
-                            return TextFormField(
-                              obscureText: _obscure,
-                              controller: passwordController,
-                              decoration: InputDecoration(
-                                hintText: "Your Password here",
-                                hintStyle: TextStyle(
-                                  color: AppColors.netural600Color,
-                                  fontSize: screenWidth * 0.035,
-                                ),
-                                filled: true,
-                                fillColor: AppColors.neutral50Color,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.035,
-                                  vertical: screenHeight * 0.016,
-                                ),
-                                suffixIcon: IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscure = !_obscure;
-                                    });
-                                  },
-                                  icon: Icon(
-                                    _obscure
-                                        ? Icons.visibility_outlined
-                                        : Icons.visibility_off_outlined,
-                                    color: AppColors.netural600Color,
+                            final passwordError = errors
+                                .firstWhereOrNull(
+                                  (error) =>
+                                      error.field ==
+                                      UserFields.password.field,
+                                )
+                                ?.message;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextFormField(
+                                  obscureText: _obscure,
+                                  obscuringCharacter: '*',
+                                  controller: passwordController,
+                                  decoration: InputDecoration(
+                                    hintText: "Your Password here",
+                                    hintStyle: TextStyle(
+                                      color: AppColors.netural600Color,
+                                      fontSize: screenWidth * 0.035,
+                                    ),
+                                    filled: true,
+                                    fillColor: AppColors.neutral50Color,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: screenWidth * 0.035,
+                                      vertical: screenHeight * 0.016,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    errorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedErrorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    errorText: null,
+                                    suffixIcon: IconButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _obscure = !_obscure;
+                                        });
+                                      },
+                                      icon: Icon(
+                                        _obscure
+                                            ? Icons.visibility_off
+                                            : Icons.visibility,
+                                        color: AppColors.netural600Color,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                errorText:
-                                    errors
-                                        .firstWhereOrNull(
-                                          (error) =>
-                                              error.field ==
-                                              UserFields.password.field,
-                                        )
-                                        ?.message,
-                              ),
+                                if (passwordError != null)
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      left: 0,
+                                      top: screenHeight * 0.005,
+                                    ),
+                                    child: Text(
+                                      passwordError,
+                                      style: TextStyle(
+                                        color: AppColors.statusRedColor,
+                                        fontSize: screenWidth * 0.032,
+                                        fontFamily: FontFamily.appFontFamily,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             );
                           },
                         ),

@@ -76,7 +76,58 @@ class LoginViewModel extends StateNotifier<BaseState<List<FormError>>>
       ).read(userProvider.notifier).setLocalUserData(user!);
       navigateToScreen(Routes.root, removeTop: true);
     } else {
-      showToastMessage(result.errorMessage ?? "");
+      // Check if error is related to incorrect password
+      bool isPasswordError = false;
+      
+      // First check errors map for password field errors
+      if (result.errors != null && result.errors!.isNotEmpty) {
+        final errors = result.errors!;
+        // Check if errors contain password-related keys
+        isPasswordError = errors.keys.any((key) => 
+          key.toLowerCase().contains('password') ||
+          key.toLowerCase().contains('credentials')
+        );
+        
+        // Also check error values for password-related messages
+        if (!isPasswordError) {
+          errors.forEach((key, value) {
+            final errorStr = value.toString().toLowerCase();
+            if (errorStr.contains('password') ||
+                errorStr.contains('incorrect') ||
+                errorStr.contains('wrong') ||
+                errorStr.contains('invalid') ||
+                errorStr.contains('credentials')) {
+              isPasswordError = true;
+            }
+          });
+        }
+      }
+      
+      // Also check error message
+      if (!isPasswordError) {
+        final errorMessage = result.errorMessage?.toLowerCase() ?? "";
+        isPasswordError = errorMessage.contains('password') ||
+            errorMessage.contains('incorrect') ||
+            errorMessage.contains('invalid') ||
+            errorMessage.contains('wrong') ||
+            errorMessage.contains('credentials');
+      }
+
+      if (isPasswordError) {
+        // Add password field error
+        state = state.copyWith(
+          data: [
+            FormError(
+              field: UserFields.password.field,
+              message: "Incorrect password. Please try again",
+            ),
+          ],
+        );
+      } 
+      // else {
+      //   // Show other errors as toast
+      //   showToastMessage(result.errorMessage ?? "Something went wrong");
+      // }
 
       // state = state.copyWith(formErrors: result.errors);
       // if (result.errors?.isEmpty ?? true) {

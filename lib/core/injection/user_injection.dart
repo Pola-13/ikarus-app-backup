@@ -9,7 +9,7 @@ import 'package:ikarusapp/features/authentication_management/data/repositories/u
 import 'package:ikarusapp/features/authentication_management/presentation/view_models/signup_view_model.dart';
 import 'package:ikarusapp/features/authentication_management/presentation/view_models/user_view_model.dart';
 import 'package:ikarusapp/features/base/data/entities/base_state.dart';
-import 'package:ikarusapp/features/base/data/entities/base_state.dart';
+import 'package:ikarusapp/features/base/data/entities/form_error.dart';
 
 import 'base_injection.dart';
 
@@ -33,6 +33,6 @@ final userLocalDataSourceProvider = Provider<UserLocalDataSource>((ref) {
 });
 
 final signupViewModelProvider =
-    StateNotifierProvider<SignupViewModel, BaseState<SignupRequest>>((ref) {
+    StateNotifierProvider<SignupViewModel, BaseState<List<FormError>>>((ref) {
       return SignupViewModel(ref.read(userRepositoryProvider));
     });

@@ -5,10 +5,12 @@ import 'package:ikarusapp/core/constants/font_family.dart';
 
 class PhoneSection extends StatelessWidget {
   final TextEditingController phoneController;
+  final String? errorMessage;
 
   const PhoneSection({
     super.key,
     required this.phoneController,
+    this.errorMessage,
   });
 
   @override
@@ -65,15 +67,43 @@ class PhoneSection extends StatelessWidget {
                   hintText: "1xxxxxxxxx",
                   filled: true,
                   fillColor: AppColors.neutral50Color,
-                  border: OutlineInputBorder(
+                  enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(screenWidth * 0.03),
                     borderSide: BorderSide.none,
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                    borderSide: BorderSide.none,
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                    borderSide: BorderSide.none,
+                  ),
+                  errorText: null,
                 ),
               ),
             ),
           ],
         ),
+        if (errorMessage != null)
+          Padding(
+            padding: EdgeInsets.only(
+              left: 0,
+              top: screenHeight * 0.005,
+            ),
+            child: Text(
+              errorMessage!,
+              style: TextStyle(
+                color: AppColors.statusRedColor,
+                fontSize: screenWidth * 0.032,
+                fontFamily: FontFamily.appFontFamily,
+              ),
+            ),
+          ),
       ],
     );
   }

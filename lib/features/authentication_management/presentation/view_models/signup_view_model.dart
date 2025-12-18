@@ -8,34 +8,35 @@ import 'package:ikarusapp/core/network/models/responses/base_api_result.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/singup_request.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/user_data.dart';
 import 'package:ikarusapp/features/authentication_management/data/models/usermodel.dart';
+import 'package:ikarusapp/features/authentication_management/data/models/signup_profile.dart';
 import 'package:ikarusapp/features/authentication_management/data/repositories/user_repository_impl.dart';
+import 'package:ikarusapp/features/authentication_management/presentation/entities/user_fields.dart';
 import 'package:ikarusapp/features/base/data/entities/base_state.dart';
 import 'package:ikarusapp/features/base/data/entities/form_error.dart';
 import 'package:ikarusapp/features/base/presentation/view_models/base_view_model.dart';
+import 'package:ikarusapp/features/base/utils/extensions/strings_validator.dart';
 
-class SignupViewModel extends StateNotifier<BaseState<SignupRequest>>
+class SignupViewModel extends StateNotifier<BaseState<List<FormError>>>
     with BaseViewModel {
   final UserRepositoryImpl _userRepositoryImpl;
+  SignupRequest _signupRequest = SignupRequest(
+    email: '',
+    password: '',
+    confirmPassword: '',
+    firstName: '',
+    lastName: '',
+    phoneE164: '',
+    packageName: '',
+    country: '',
+    city: '',
+    street: '',
+    postalCode: '',
+  );
 
   SignupViewModel(this._userRepositoryImpl)
-    : super(
-        BaseState(
-          data: SignupRequest(
-            email: '',
-            password: '',
-            confirmPassword: '',
-            firstName: '',
-            lastName: '',
-            phoneE164: '',
-            packageName: '',
-            country: '',
-            city: '',
-            street: '',
-            postalCode: '',
-          ),
-          isFormButtonEnabled: true,
-        ),
-      );
+    : super(BaseState(data: [], isFormButtonEnabled: true));
+
+  SignupRequest get signupRequest => _signupRequest;
 
   Future<void> validateSignUpUser({
     required String email,
@@ -50,20 +51,80 @@ class SignupViewModel extends StateNotifier<BaseState<SignupRequest>>
     final String? password,
     final String? confirmPassword,
   }) async {
+    List<FormError> errors = [];
+
     if (email.trim().isEmpty) {
-      showToastMessage("Please enter your email address");
-    } else if (firstName.isEmpty) {
-      showToastMessage("Please enter your first name ");
-    } else if (lastName.isEmpty) {
-      showToastMessage("Please enter your last name ");
-    } else if (phoneE164.isEmpty) {
-      showToastMessage("Please enter your phone number ");
-    } else if (country.isEmpty) {
-      showToastMessage("Please enter your country ");
-    } else if (city.isEmpty) {
-      showToastMessage("Please enter your city ");
-    } else {
-      SignupRequest signupRequest = SignupRequest(
+      errors.add(
+        FormError(
+          field: UserFields.email.field,
+          message: "Please enter your email address",
+        ),
+      );
+    } else if (!email.trim().isValidEmail()) {
+      errors.add(
+        FormError(
+          field: UserFields.email.field,
+          message: "Please enter valid email address",
+        ),
+      );
+    }
+
+    if (firstName.isEmpty) {
+      errors.add(
+        FormError(
+          field: UserFields.firstName.field,
+          message: "enter your first name",
+        ),
+      );
+    }
+
+    if (lastName.isEmpty) {
+      errors.add(
+        FormError(
+          field: UserFields.lastName.field,
+          message: "enter your last name",
+        ),
+      );
+    }
+
+    if (phoneE164.isEmpty) {
+      errors.add(
+        FormError(
+          field: UserFields.phone.field,
+          message: "enter your phone number",
+        ),
+      );
+    }
+
+    if (country.isEmpty) {
+      errors.add(
+        FormError(
+          field: UserFields.country.field,
+          message: "choose your country",
+        ),
+      );
+    }
+
+    if (city.isEmpty) {
+      errors.add(
+        FormError(
+          field: UserFields.city.field,
+          message: "choose your city",
+        ),
+      );
+    }
+
+    if (street.isEmpty) {
+      errors.add(
+        FormError(
+          field: UserFields.street.field,
+          message: "choose your district",
+        ),
+      );
+    }
+
+    if (errors.isEmpty) {
+      _signupRequest = SignupRequest(
         email: email,
         password: '',
         confirmPassword: '',
@@ -74,13 +135,15 @@ class SignupViewModel extends StateNotifier<BaseState<SignupRequest>>
         country: country,
         city: city,
         street: street,
-        postalCode: '',
+        postalCode: postalCode ?? '',
       );
-      state = state.copyWith(data: signupRequest);
+      state = state.copyWith(data: []);
       Navigator.pushNamed(
         AppConstants.navigatorKey.currentContext!,
         Routes.createPassword,
       );
+    } else {
+      state = state.copyWith(data: errors);
     }
   }
 
@@ -89,38 +152,27 @@ class SignupViewModel extends StateNotifier<BaseState<SignupRequest>>
     required String confirmPassword,
   }) async {
     _startLoading();
-    SignupRequest signupRequest = state.data;
-    BaseApiResult<UserData?> result = await _userRepositoryImpl.signup({
+    BaseApiResult<SignupProfile> result = await _userRepositoryImpl.signup({
       // Signup data here
-      'first_name': signupRequest.firstName,
-      'last_name': signupRequest.lastName,
-      'email': signupRequest.email,
+      'first_name': _signupRequest.firstName,
+      'last_name': _signupRequest.lastName,
+      'email': _signupRequest.email,
       'phoneCode': "",
-      'phone_e164': signupRequest.phoneE164,
-      'country': signupRequest.country,
-      'city': signupRequest.city,
-      'street': signupRequest.street,
+      'phone_e164': _signupRequest.phoneE164,
+      'country': _signupRequest.country,
+      'city': _signupRequest.city,
+      'street': _signupRequest.street,
       "password": password,
       "confirm_password": confirmPassword,
     }); //call API
     _hideLoading();
 
     if (result.data != null) {
-      // var user = result.data;
-      // ProviderScope.containerOf(
-      //   AppConstants.navigatorKey.currentContext!,
-      // ).read(userProvider.notifier).setLocalUserData(user!);
+      // Signup successful - navigate to login page
+      // Note: Signup doesn't return tokens, user needs to login
       navigateToScreen(Routes.login, removeTop: true);
     } else {
-      showToastMessage(result.errorMessage ?? "");
-
-      // state = state.copyWith(formErrors: result.errors);
-      // if (result.errors?.isEmpty ?? true) {
-      //   handleError(
-      //     errorType: result.errorType ?? ApiErrorType.generalError,
-      //     errorMessage: result.errorMessage,
-      //   );
-      // }
+      showToastMessage(result.errorMessage ?? "Something went wrong");
     }
   }
 

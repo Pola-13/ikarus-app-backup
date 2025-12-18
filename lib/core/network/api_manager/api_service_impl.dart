@@ -15,20 +15,37 @@ class ApiServiceImpl extends ApiService {
   @override
   BaseApiResult<List<T>> handleListResponse<T>(Response response) {
     var responseData = response.data;
+    
+    debugPrint('🔍 ListResponse Status: ${response.statusCode}');
+    debugPrint('🔍 ListResponse Data Type: ${responseData.runtimeType}');
+    
     if (responseData == null) {
+      debugPrint('❌ ListResponse: responseData is null');
       return BaseApiResult<List<T>>(errorMessage: "Something went wrong");
     }
 
     if (responseData is Map<String, dynamic>) {
-      // New structure with is_successful and data.results
+      debugPrint('🔍 ListResponse: Data is Map');
+      debugPrint('🔍 ListResponse Keys: ${responseData.keys.toList()}');
+      
+      // Check if data is directly a list
+      if (responseData['data'] != null && responseData['data'] is List) {
+        debugPrint('🔍 ListResponse: data is directly a List with ${(responseData['data'] as List).length} items');
+      }
+      
+      // New structure with is_successful and data (as list or data.results)
       if (responseData.containsKey('is_successful')) {
+        debugPrint('🔍 ListResponse: has is_successful flag');
         ListResponse<T> baseResponse = ListResponse<T>.fromJson(responseData);
+
+        debugPrint('🔍 ListResponse: isSuccessful = ${baseResponse.isSuccessful}');
+        debugPrint('🔍 ListResponse: data count = ${baseResponse.data?.length ?? 0}');
 
         if (baseResponse.isSuccessful == true) {
           return BaseApiResult<List<T>>(
             data: baseResponse.data,
             successMessage: baseResponse.message,
-            status: 200,
+            status: response.statusCode ?? 200,
           );
         } else {
           return BaseApiResult<List<T>>(
@@ -40,15 +57,18 @@ class ApiServiceImpl extends ApiService {
       }
 
       // Fallback to old structure (results at root)
+      debugPrint('🔍 ListResponse: No is_successful flag, using fallback');
       ListResponse<T> baseResponse = ListResponse<T>.fromJson(responseData);
 
       return BaseApiResult<List<T>>(
         data: baseResponse.data,
         successMessage: baseResponse.message,
+        status: response.statusCode ?? 200,
       );
     }
 
-    return BaseApiResult<List<T>>(errorMessage: "Something went wrong");
+    debugPrint('❌ ListResponse: responseData is not a Map');
+    return BaseApiResult<List<T>>(errorMessage: "Invalid response format");
   }
 
   @override

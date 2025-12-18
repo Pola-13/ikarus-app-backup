@@ -36,14 +36,25 @@ class ListResponse<T> {
       errors = json['errors'] as Map<String, dynamic>;
     }
 
-    // Extract list data (new format: data.results, fallback: results)
-    final resultsSource =
-        json['data'] != null && json['data'] is Map && json['data']['results'] != null
-            ? json['data']['results']
-            : json['results'];
+    // Extract list data
+    // New format: data is directly a list, or data.results, or results at root
+    List<dynamic>? resultsSource;
+    
+    if (json['data'] != null) {
+      if (json['data'] is List) {
+        // Data is directly a list (e.g., countries API)
+        resultsSource = json['data'] as List<dynamic>;
+      } else if (json['data'] is Map && json['data']['results'] != null) {
+        // Data is an object with results property
+        resultsSource = json['data']['results'] as List<dynamic>;
+      }
+    } else if (json['results'] != null) {
+      // Fallback: results at root level
+      resultsSource = json['results'] as List<dynamic>;
+    }
 
     final parsedData = resultsSource != null
-        ? (resultsSource as List)
+        ? resultsSource
             .map((i) => (i as Map<String, dynamic>).parse<T>())
             .whereType<T>()
             .toList()

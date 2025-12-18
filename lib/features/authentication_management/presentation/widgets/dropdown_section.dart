@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ikarusapp/core/constants/colors.dart';
 import 'package:ikarusapp/core/constants/device.dart';
 import 'package:ikarusapp/core/constants/font_family.dart';
+import 'package:ikarusapp/core/injection/location_injection.dart';
 import 'package:ikarusapp/features/base/presentation/widgets/dropdowmmenu.dart';
 
-class DropdownSection extends StatelessWidget {
-  final String? selectedCountry;
-  final String? selectedGovernorate;
-  final String? selectedDistrict;
+class DropdownSection extends ConsumerStatefulWidget {
   final String? countryError;
   final String? cityError;
   final String? streetError;
@@ -18,9 +17,6 @@ class DropdownSection extends StatelessWidget {
 
   const DropdownSection({
     super.key,
-    required this.selectedCountry,
-    required this.selectedGovernorate,
-    required this.selectedDistrict,
     this.countryError,
     this.cityError,
     this.streetError,
@@ -30,34 +26,92 @@ class DropdownSection extends StatelessWidget {
   });
 
   @override
+  ConsumerState<DropdownSection> createState() => _DropdownSectionState();
+}
+
+class _DropdownSectionState extends ConsumerState<DropdownSection> {
+  @override
+  void initState() {
+    super.initState();
+    // Load countries when widget is initialized
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(locationViewModelProvider.notifier).loadCountries();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final double screenWidth = Device.deviceWidth(context: context);
     final double screenHeight = Device.deviceHeight(context: context);
+    
+    final locationState = ref.watch(locationViewModelProvider);
+    final locationNotifier = ref.read(locationViewModelProvider.notifier);
 
     return Column(
       children: [
+        // Country Dropdown
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownField(
               label: "Country",
-              hint: "Egypt",
-              value: selectedCountry,
-              items: const [
-                DropdownMenuItem(value: "egypt", child: Text("Egypt")),
-                DropdownMenuItem(value: "uae", child: Text("UAE")),
-                DropdownMenuItem(value: "ksa", child: Text("Saudi Arabia")),
-              ],
-              onChanged: onCountryChanged,
+              hint: "Select Country",
+              value: locationState.selectedCountryCode != null &&
+                      locationState.countries.any((c) => c.code == locationState.selectedCountryCode)
+                  ? locationState.selectedCountryCode
+                  : null,
+              items: locationState.isLoadingCountries
+                  ? [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+                            ),
+                          ),
+                        ),
+                      )
+                    ]
+                  : locationState.countries
+                      .map((country) => DropdownMenuItem(
+                            value: country.code,
+                            child: Text(country.name),
+                          ))
+                      .toList(),
+              onChanged: locationState.isLoadingCountries
+                  ? (_) {}
+                  : (value) {
+                      locationNotifier.selectCountry(value);
+                      widget.onCountryChanged(value);
+                    },
             ),
-            if (countryError != null)
+            if (widget.countryError != null)
               Padding(
                 padding: EdgeInsets.only(
                   left: 0,
                   top: screenHeight * 0.005,
                 ),
                 child: Text(
-                  countryError!,
+                  widget.countryError!,
+                  style: TextStyle(
+                    color: AppColors.statusRedColor,
+                    fontSize: screenWidth * 0.032,
+                    fontFamily: FontFamily.appFontFamily,
+                  ),
+                ),
+              ),
+            if (locationState.countriesError != null)
+              Padding(
+                padding: EdgeInsets.only(
+                  left: 0,
+                  top: screenHeight * 0.005,
+                ),
+                child: Text(
+                  locationState.countriesError!,
                   style: TextStyle(
                     color: AppColors.statusRedColor,
                     fontSize: screenWidth * 0.032,
@@ -70,28 +124,72 @@ class DropdownSection extends StatelessWidget {
 
         const SizedBox(height: 15),
 
+        // Governorate (City) Dropdown
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownField(
               label: "Governorate",
-              hint: "Cairo",
-              value: selectedGovernorate,
-              items: const [
-                DropdownMenuItem(value: "cairo", child: Text("Cairo")),
-                DropdownMenuItem(value: "giza", child: Text("Giza")),
-                DropdownMenuItem(value: "alex", child: Text("Alexandria")),
-              ],
-              onChanged: onGovernorateChanged,
+              hint: "Select Governorate",
+              value: locationState.selectedCityId != null &&
+                      locationState.cities.any((c) => c.id == locationState.selectedCityId)
+                  ? locationState.selectedCityId
+                  : null,
+              items: locationState.selectedCountryCode == null
+                  ? []
+                  : locationState.isLoadingCities
+                      ? [
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Center(
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+                                ),
+                              ),
+                            ),
+                          )
+                        ]
+                      : locationState.cities
+                          .map((city) => DropdownMenuItem(
+                                value: city.id,
+                                child: Text(city.name),
+                              ))
+                          .toList(),
+              onChanged: locationState.selectedCountryCode == null ||
+                      locationState.isLoadingCities
+                  ? (_) {}
+                  : (value) {
+                      locationNotifier.selectCity(value);
+                      widget.onGovernorateChanged(value);
+                    },
             ),
-            if (cityError != null)
+            if (widget.cityError != null)
               Padding(
                 padding: EdgeInsets.only(
                   left: 0,
                   top: screenHeight * 0.005,
                 ),
                 child: Text(
-                  cityError!,
+                  widget.cityError!,
+                  style: TextStyle(
+                    color: AppColors.statusRedColor,
+                    fontSize: screenWidth * 0.032,
+                    fontFamily: FontFamily.appFontFamily,
+                  ),
+                ),
+              ),
+            if (locationState.citiesError != null)
+              Padding(
+                padding: EdgeInsets.only(
+                  left: 0,
+                  top: screenHeight * 0.005,
+                ),
+                child: Text(
+                  locationState.citiesError!,
                   style: TextStyle(
                     color: AppColors.statusRedColor,
                     fontSize: screenWidth * 0.032,
@@ -104,28 +202,72 @@ class DropdownSection extends StatelessWidget {
 
         const SizedBox(height: 15),
 
+        // District Dropdown
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownField(
               label: "District",
-              hint: "Mokatam",
-              value: selectedDistrict,
-              items: const [
-                DropdownMenuItem(value: "mokatam", child: Text("Mokatam")),
-                DropdownMenuItem(value: "nasr", child: Text("Nasr City")),
-                DropdownMenuItem(value: "heliopolis", child: Text("Heliopolis")),
-              ],
-              onChanged: onDistrictChanged,
+              hint: "Select District",
+              value: locationState.selectedDistrictId != null &&
+                      locationState.districts.any((d) => d.id == locationState.selectedDistrictId)
+                  ? locationState.selectedDistrictId
+                  : null,
+              items: locationState.selectedCityId == null
+                  ? []
+                  : locationState.isLoadingDistricts
+                      ? [
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Center(
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+                                ),
+                              ),
+                            ),
+                          )
+                        ]
+                      : locationState.districts
+                          .map((district) => DropdownMenuItem(
+                                value: district.id,
+                                child: Text(district.name),
+                              ))
+                          .toList(),
+              onChanged: locationState.selectedCityId == null ||
+                      locationState.isLoadingDistricts
+                  ? (_) {}
+                  : (value) {
+                      locationNotifier.selectDistrict(value);
+                      widget.onDistrictChanged(value);
+                    },
             ),
-            if (streetError != null)
+            if (widget.streetError != null)
               Padding(
                 padding: EdgeInsets.only(
                   left: 0,
                   top: screenHeight * 0.005,
                 ),
                 child: Text(
-                  streetError!,
+                  widget.streetError!,
+                  style: TextStyle(
+                    color: AppColors.statusRedColor,
+                    fontSize: screenWidth * 0.032,
+                    fontFamily: FontFamily.appFontFamily,
+                  ),
+                ),
+              ),
+            if (locationState.districtsError != null)
+              Padding(
+                padding: EdgeInsets.only(
+                  left: 0,
+                  top: screenHeight * 0.005,
+                ),
+                child: Text(
+                  locationState.districtsError!,
                   style: TextStyle(
                     color: AppColors.statusRedColor,
                     fontSize: screenWidth * 0.032,

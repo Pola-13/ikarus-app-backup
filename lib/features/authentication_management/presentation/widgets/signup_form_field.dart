@@ -7,6 +7,7 @@ import 'package:ikarusapp/core/constants/colors.dart';
 import 'package:ikarusapp/core/constants/font_family.dart';
 import 'package:ikarusapp/core/constants/device.dart';
 import 'package:ikarusapp/core/injection/user_injection.dart';
+import 'package:ikarusapp/core/injection/location_injection.dart';
 import 'package:ikarusapp/features/authentication_management/presentation/entities/user_fields.dart';
 import 'package:ikarusapp/features/authentication_management/presentation/widgets/car_model_section.dart';
 import 'package:ikarusapp/features/authentication_management/presentation/widgets/dropdown_section.dart';
@@ -28,9 +29,6 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final TextEditingController _carModelController = TextEditingController();
-  String? _selectedCountry;
-  String? _selectedGovernorate;
-  String? _selectedDistrict;
 
   @override
   void dispose() {
@@ -152,10 +150,9 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
             final errors = ref.watch(
               signupViewModelProvider.select((value) => value.data),
             );
+            final locationState = ref.watch(locationViewModelProvider);
+            
             return DropdownSection(
-              selectedCountry: _selectedCountry,
-              selectedGovernorate: _selectedGovernorate,
-              selectedDistrict: _selectedDistrict,
               countryError: errors
                   .firstWhereOrNull(
                     (error) => error.field == UserFields.country.field,
@@ -172,17 +169,13 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
                   )
                   ?.message,
               onCountryChanged: (val) {
-                setState(() {
-                  _selectedCountry = val;
-                  _selectedGovernorate = null;
-                  _selectedDistrict = null;
-                });
+                // Country selection is handled by LocationViewModel
               },
               onGovernorateChanged: (val) {
-                setState(() => _selectedGovernorate = val);
+                // City selection is handled by LocationViewModel
               },
               onDistrictChanged: (val) {
-                setState(() => _selectedDistrict = val);
+                // District selection is handled by LocationViewModel
               },
             );
           },
@@ -285,41 +278,46 @@ class _SignupFormFieldsState extends ConsumerState<SignupFormFields> {
 
   // SIGN UP BUTTON
   Widget _signUpButton(double screenWidth, double screenHeight) {
-    return SizedBox(
-      height: screenHeight * 0.06,
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {
-          ref
-              .read(signupViewModelProvider.notifier)
-              .validateSignUpUser(
-                email: _emailController.text.trim(),
-                firstName: _firstNameCtrl.text.trim(),
-                lastName: _lastNameCtrl.text.trim(),
-                phoneE164: "+20${_phoneController.text.trim()}",
-                country: _selectedCountry ?? "",
-                city: _selectedGovernorate ?? "",
-                street: _selectedDistrict ?? "",
-                postalCode: "", // add later if needed
-              );
-
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.tealColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(screenWidth * 0.03),
+    return Consumer(
+      builder: (context, ref, _) {
+        final locationState = ref.watch(locationViewModelProvider);
+        
+        return SizedBox(
+          height: screenHeight * 0.06,
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              ref
+                  .read(signupViewModelProvider.notifier)
+                  .validateSignUpUser(
+                    email: _emailController.text.trim(),
+                    firstName: _firstNameCtrl.text.trim(),
+                    lastName: _lastNameCtrl.text.trim(),
+                    phoneE164: "+20${_phoneController.text.trim()}",
+                    country: locationState.selectedCountryCode ?? "",
+                    city: locationState.selectedCityId ?? "",
+                    street: locationState.selectedDistrictId ?? "",
+                    postalCode: "", // add later if needed
+                  );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.tealColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              "Sign Up",
+              style: TextStyle(
+                fontSize: screenWidth * 0.041,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
-          elevation: 0,
-        ),
-        child: Text(
-          "Sign Up",
-          style: TextStyle(
-            fontSize: screenWidth * 0.041,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 

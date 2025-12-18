@@ -36,9 +36,11 @@ class _ManagePersonalInfoPageState extends State<ManagePersonalInfoPage> {
   final _carModelCtrl = TextEditingController(text: "Nissan Sunny 2016");
 
   // ---------------- DROPDOWN STATE ----------------
-  String? _selectedCountry = "egypt";
-  String? _selectedGovernorate = "cairo";
-  String? _selectedDistrict = "mokatam";
+  // Note: DropdownSection now manages its own state through LocationViewModel
+  // These variables can be used to track changes if needed
+  String? _selectedCountryCode;
+  String? _selectedCityId;
+  String? _selectedDistrictId;
 
   // ---------------- IMAGE PICK ----------------
   Future<void> pickImage() async {
@@ -105,21 +107,23 @@ class _ManagePersonalInfoPageState extends State<ManagePersonalInfoPage> {
 
               // -------- LOCATION --------
               DropdownSection(
-                selectedCountry: _selectedCountry,
-                selectedGovernorate: _selectedGovernorate,
-                selectedDistrict: _selectedDistrict,
                 onCountryChanged: (val) {
                   setState(() {
-                    _selectedCountry = val;
-                    _selectedGovernorate = null;
-                    _selectedDistrict = null;
+                    _selectedCountryCode = val;
+                    _selectedCityId = null;
+                    _selectedDistrictId = null;
                   });
                 },
                 onGovernorateChanged: (val) {
-                  setState(() => _selectedGovernorate = val);
+                  setState(() {
+                    _selectedCityId = val;
+                    _selectedDistrictId = null;
+                  });
                 },
                 onDistrictChanged: (val) {
-                  setState(() => _selectedDistrict = val);
+                  setState(() {
+                    _selectedDistrictId = val;
+                  });
                 },
               ),
               SizedBox(height: screenHeight * 0.03),

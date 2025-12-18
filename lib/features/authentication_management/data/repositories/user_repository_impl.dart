@@ -20,7 +20,7 @@ class UserRepositoryImpl {
     return userRemoteDataSource.login(email, password);
   }
 
-  Future<BaseApiResult<SignupProfile>> signup(Map<String, String> data) {
+  Future<BaseApiResult<SignupProfile>> signup(Map<String, dynamic> data) {
     return userRemoteDataSource.signup(data);
   }
 

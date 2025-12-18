@@ -51,7 +51,7 @@ class UserRemoteDataSource {
   }
 
   // SignUp method
-  Future<BaseApiResult<SignupProfile>> signup(Map<String, String> data) async {
+  Future<BaseApiResult<SignupProfile>> signup(Map<String, dynamic> data) async {
     try {
       final response = await apiService.post<SignupProfile>(
         ApiUrls.signup,

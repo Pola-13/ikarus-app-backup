@@ -201,17 +201,16 @@ class SignupViewModel extends StateNotifier<BaseState<List<FormError>>>
   }) async {
     _startLoading();
     BaseApiResult<SignupProfile> result = await _userRepositoryImpl.signup({
-      // Signup data here
       'first_name': _signupRequest.firstName,
       'last_name': _signupRequest.lastName,
       'email': _signupRequest.email,
-      'phoneCode': "",
       'phone_e164': _signupRequest.phoneE164,
-      'country': _signupRequest.country,
-      'city': _signupRequest.city,
-      'street': _signupRequest.street,
-      "password": password,
-      "confirm_password": confirmPassword,
+      'country_code': _signupRequest.country, // Country code (e.g., "EG")
+      'city_id': _signupRequest.city, // City ID
+      'district_id': _signupRequest.street, // District ID (stored in street field)
+      'postal_code': _signupRequest.postalCode,
+      'password': password,
+      'confirm_password': confirmPassword,
     }); //call API
     _hideLoading();
 
@@ -220,7 +219,52 @@ class SignupViewModel extends StateNotifier<BaseState<List<FormError>>>
       // Note: Signup doesn't return tokens, user needs to login
       navigateToScreen(Routes.login, removeTop: true);
     } else {
-      showToastMessage(result.errorMessage ?? "Something went wrong");
+      // Handle field-specific errors
+      if (result.errors != null && result.errors!.isNotEmpty) {
+        List<FormError> formErrors = [];
+        result.errors!.forEach((key, value) {
+          String? fieldName;
+          // Map API error fields to UserFields
+          switch (key) {
+            case 'first_name':
+              fieldName = UserFields.firstName.field;
+              break;
+            case 'last_name':
+              fieldName = UserFields.lastName.field;
+              break;
+            case 'email':
+              fieldName = UserFields.email.field;
+              break;
+            case 'phone_e164':
+            case 'phone':
+              fieldName = UserFields.phone.field;
+              break;
+            case 'country':
+              fieldName = UserFields.country.field;
+              break;
+            case 'city':
+              fieldName = UserFields.city.field;
+              break;
+            case 'street':
+            case 'district':
+              fieldName = UserFields.street.field;
+              break;
+          }
+          
+          String errorMessage = value is List ? value.first.toString() : value.toString();
+          if (fieldName != null) {
+            formErrors.add(FormError(field: fieldName, message: errorMessage));
+          }
+        });
+        
+        if (formErrors.isNotEmpty) {
+          state = state.copyWith(data: formErrors);
+        } else {
+          showToastMessage(result.errorMessage ?? "Signup failed. Please try again.");
+        }
+      } else {
+        showToastMessage(result.errorMessage ?? "Signup failed. Please try again.");
+      }
     }
   }
 

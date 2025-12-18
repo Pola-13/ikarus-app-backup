@@ -9,8 +9,10 @@ class SignupProfile {
     this.phoneE164,
     this.countryCode,
     this.country,
+    this.cityId,
     this.city,
-    this.street,
+    this.districtId,
+    this.district,
     this.postalCode,
     this.preferredCurrency,
     this.dateOfBirth,
@@ -35,8 +37,10 @@ class SignupProfile {
   final String? phoneE164;
   final String? countryCode;
   final String? country;
+  final String? cityId;
   final String? city;
-  final String? street;
+  final String? districtId;
+  final String? district;
   final String? postalCode;
   final String? preferredCurrency;
   final DateTime? dateOfBirth;
@@ -62,8 +66,10 @@ class SignupProfile {
       phoneE164: json["phone_e164"],
       countryCode: json["country_code"],
       country: json["country"],
+      cityId: json["city_id"],
       city: json["city"],
-      street: json["street"],
+      districtId: json["district_id"],
+      district: json["district"],
       postalCode: json["postal_code"],
       preferredCurrency: json["preferred_currency"],
       dateOfBirth: json["date_of_birth"] != null
@@ -98,8 +104,10 @@ class SignupProfile {
         "phone_e164": phoneE164,
         "country_code": countryCode,
         "country": country,
+        "city_id": cityId,
         "city": city,
-        "street": street,
+        "district_id": districtId,
+        "district": district,
         "postal_code": postalCode,
         "preferred_currency": preferredCurrency,
         "date_of_birth": dateOfBirth?.toIso8601String(),

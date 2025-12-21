@@ -1,25 +1,137 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:ikarusapp/core/injection/station_injection.dart';
 import 'package:ikarusapp/features/base/presentation/widgets/Appbar/addfunds_appbar.dart';
 import 'package:ikarusapp/core/constants/app_routs.dart';
 import 'package:ikarusapp/core/constants/colors.dart';
 import 'package:ikarusapp/core/constants/device.dart';
+import 'package:ikarusapp/features/station_management/data/models/station_data.dart';
+import 'package:ikarusapp/features/station_management/data/models/connector_data.dart';
 import 'package:ikarusapp/features/station_management/presentation/screens/zahraaAlmaadai/DirectionButton.dart';
 import 'package:ikarusapp/features/station_management/presentation/screens/zahraaAlmaadai/zahraa_station_IMGs.dart';
 import 'package:ikarusapp/features/station_management/presentation/widgets/googlemaproute.dart';
 import 'package:ikarusapp/features/general_management/presentation/screens/rating.dart';
 import 'package:ikarusapp/features/base/presentation/widgets/pricing_section.dart';
 
-class ZahraaAlmaadai extends StatefulWidget {
-  const ZahraaAlmaadai({super.key});
+class ZahraaAlmaadai extends ConsumerStatefulWidget {
+  final StationData? station;
+  
+  const ZahraaAlmaadai({super.key, this.station});
 
   @override
-  State<ZahraaAlmaadai> createState() => _ZahraaAlmaadaiState();
+  ConsumerState<ZahraaAlmaadai> createState() => _ZahraaAlmaadaiState();
 }
 
-class _ZahraaAlmaadaiState extends State<ZahraaAlmaadai> {
+class _ZahraaAlmaadaiState extends ConsumerState<ZahraaAlmaadai> {
   int segmentIndex = 0;
-  final Map<String, dynamic> station = {'lat': 29.96779, 'lng': 31.29480};
+  List<ConnectorData> connectors = [];
+  bool isLoadingConnectors = true;
+  String? connectorErrorMessage;
+  bool _isDisposed = false;
+  
+  StationData get station => widget.station ?? StationData(
+    id: null,
+    name: "Zahraa Almaadai Station",
+    address: null,
+    country: null,
+    governorate: null,
+    serviceProvider: null,
+    maintenancePartner: null,
+    siteOwner: null,
+    latitude: 29.96779,
+    longitude: 31.29480,
+    visibility: null,
+    status: null,
+    chargersCount: null,
+    connectorSummary: null,
+    images: [],
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConnectors();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  Future<void> _loadConnectors() async {
+    if (station.id == null) {
+      if (!mounted || _isDisposed) return;
+      setState(() {
+        isLoadingConnectors = false;
+        connectorErrorMessage = "Station ID is missing";
+      });
+      return;
+    }
+
+    if (!mounted || _isDisposed) return;
+    setState(() {
+      isLoadingConnectors = true;
+      connectorErrorMessage = null;
+    });
+
+    try {
+      final repository = ref.read(stationRepositoryProvider);
+      final stationId = station.id!;
+      
+      // Fetch chargers for this station
+      final chargersResult = await repository.getChargers(stationId);
+      
+      if (!mounted || _isDisposed) return;
+      
+      if (chargersResult.data == null || chargersResult.data!.isEmpty) {
+        if (!mounted || _isDisposed) return;
+        setState(() {
+          isLoadingConnectors = false;
+          connectors = [];
+        });
+        return;
+      }
+
+      // Fetch connectors for each charger
+      List<ConnectorData> allConnectors = [];
+      
+      for (var charger in chargersResult.data!) {
+        if (_isDisposed) return;
+        
+        if (charger.id != null) {
+          final connectorsResult = await repository.getConnectors(charger.id!);
+          if (!mounted || _isDisposed) return;
+          
+          if (connectorsResult.data != null) {
+            // Filter connectors to ensure they belong to this station
+            final stationConnectors = connectorsResult.data!
+                .where((connector) {
+                  final connectorStationId = connector.stationId?.toString().trim();
+                  final targetStationId = stationId.toString().trim();
+                  return connectorStationId == targetStationId;
+                })
+                .toList();
+            allConnectors.addAll(stationConnectors);
+          }
+        }
+      }
+
+      if (!mounted || _isDisposed) return;
+      setState(() {
+        isLoadingConnectors = false;
+        connectors = allConnectors;
+      });
+    } catch (e) {
+      if (!mounted || _isDisposed) return;
+      setState(() {
+        isLoadingConnectors = false;
+        connectorErrorMessage = "Failed to load connectors: $e";
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +145,7 @@ class _ZahraaAlmaadaiState extends State<ZahraaAlmaadai> {
       left: false,
       child: Scaffold(
         backgroundColor: AppColors.whiteColor,
-        appBar: buildAppBar(context, "Zahraa Almaadai Station"),
+        appBar: buildAppBar(context, "${station.name ?? "Station"}"),
         body: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.symmetric(
@@ -96,7 +208,7 @@ class _ZahraaAlmaadaiState extends State<ZahraaAlmaadai> {
         bottomNavigationBar: DirectionsButton(
           isOverviewSelected: segmentIndex == 0,
           onPressed: () {
-            openGoogleMapsRoute(station['lat'], station['lng']);
+            openGoogleMapsRoute(station.latitude ?? 0, station.longitude ?? 0);
           },
         ),
       ),
@@ -137,7 +249,7 @@ class _ZahraaAlmaadaiState extends State<ZahraaAlmaadai> {
       children: [
         // Station Title
         Text(
-          "Zahraa Almaadai Station",
+          station.name ?? "Station",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: screenWidth * 0.05,
@@ -145,7 +257,7 @@ class _ZahraaAlmaadaiState extends State<ZahraaAlmaadai> {
         ),
         SizedBox(height: 4),
         Text(
-          "55 Zahraa Almaadai, Cairo 78239",
+          station.address ?? "",
           style: TextStyle(
             color: Colors.black54,
             fontSize: screenWidth * 0.035,
@@ -183,29 +295,94 @@ class _ZahraaAlmaadaiState extends State<ZahraaAlmaadai> {
         SizedBox(height: screenHeight * 0.03),
 
         // Connector Cards
-        _connectorCard(
-          title: "Zahraa Almaadai 1 (1)",
-          kwh: "22 kWh",
-          status: "Available",
-          color: AppColors.tealColor,
-          available: true,
-        ),
-        SizedBox(height: screenHeight * 0.02),
-        _connectorCard(
-          title: "Zahraa Almaadai 2 (1)",
-          kwh: "22 kWh",
-          status: "Charging",
-          color: Colors.orange,
-          available: false,
-        ),
-        SizedBox(height: screenHeight * 0.02),
-        _connectorCard(
-          title: "Zahraa Almaadai 2 (2)",
-          kwh: "22 kWh",
-          status: "Unavailable",
-          color: Colors.red,
-          available: false,
-        ),
+        if (isLoadingConnectors)
+          const Padding(
+            padding: EdgeInsets.all(20.0),
+            child: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+              ),
+            ),
+          )
+        else if (connectorErrorMessage != null)
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              children: [
+                Text(
+                  connectorErrorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: _loadConnectors,
+                  child: const Text("Retry"),
+                ),
+              ],
+            ),
+          )
+        else if (connectors.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(20.0),
+            child: Text(
+              "No connectors available",
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          )
+        else
+          ...connectors.map((connector) {
+            // Map API status to display status
+            String displayStatus = connector.status ?? "";
+            Color statusColor;
+            bool isAvailable = false;
+            
+            switch (displayStatus.toLowerCase()) {
+              case "available":
+                statusColor = AppColors.tealColor;
+                displayStatus = "Available";
+                isAvailable = true;
+                break;
+              case "charging":
+                statusColor = Colors.orange;
+                displayStatus = "Charging";
+                isAvailable = false;
+                break;
+              case "preparing":
+                statusColor = Colors.orange;
+                displayStatus = "Preparing";
+                isAvailable = false;
+                break;
+              case "unavailable":
+                statusColor = Colors.red;
+                displayStatus = "Unavailable";
+                isAvailable = false;
+                break;
+              case "faulted":
+                statusColor = Colors.red;
+                displayStatus = "Faulted";
+                isAvailable = false;
+                break;
+              default:
+                statusColor = Colors.grey;
+                if (displayStatus.isNotEmpty) {
+                  displayStatus = displayStatus[0].toUpperCase() + displayStatus.substring(1).toLowerCase();
+                }
+                isAvailable = false;
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: screenHeight * 0.02),
+              child: _connectorCard(
+                title: connector.identifier ?? "",
+                kwh: "${connector.powerKw ?? 0} Kwh",
+                status: displayStatus,
+                color: statusColor,
+                available: isAvailable,
+              ),
+            );
+          }).toList(),
       ],
     );
   }
@@ -324,16 +501,16 @@ class _ZahraaAlmaadaiState extends State<ZahraaAlmaadai> {
       textColor = Colors.white;
       buttonText = "Start Charge";
       showIcon = true;
-    } else if (status == "Charging") {
+    } else if (status == "Charging" || status == "Preparing") {
       buttonColor = AppColors.netural100Color;
       textColor = AppColors.netural400Color;
-      buttonText = "Charging";
+      buttonText = status;
       showIcon = false;
     } else {
-      // Unavailable
+      // Unavailable, Faulted, or other statuses
       buttonColor = AppColors.netural100Color;
       textColor = AppColors.netural400Color;
-      buttonText = "Unavailable";
+      buttonText = status;
       showIcon = false;
     }
 
@@ -372,21 +549,40 @@ class _ZahraaAlmaadaiState extends State<ZahraaAlmaadai> {
                   ),
                 ],
               ),
-              Text(
-                kwh,
-                style: TextStyle(
-                  fontSize: screenWidth * 0.035,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              Text(
-                status,
-                style: TextStyle(
-                  fontSize: screenWidth * 0.035,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.035,
+                        color: Colors.black87,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: kwh.split(' ')[0], // The number part
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        TextSpan(
+                          text: ' ${kwh.split(' ').length > 1 ? kwh.split(' ')[1] : 'Kwh'}', // The "Kwh" part
+                          style: TextStyle(
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.netural600Color,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: screenWidth * 0.02),
+                  Text(
+                    status,
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.035,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

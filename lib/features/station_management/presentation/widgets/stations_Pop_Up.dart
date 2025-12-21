@@ -1,27 +1,169 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:ikarusapp/core/constants/app_routs.dart';
 import 'package:ikarusapp/core/constants/colors.dart';
 import 'package:ikarusapp/core/constants/device.dart';
+import 'package:ikarusapp/core/injection/station_injection.dart';
 import 'package:ikarusapp/features/station_management/data/models/station_data.dart';
+import 'package:ikarusapp/features/station_management/data/models/connector_data.dart';
+import 'package:ikarusapp/features/station_management/presentation/screens/zahraaAlmaadai/zahraa_almaadai.dart';
 import 'package:ikarusapp/features/station_management/presentation/widgets/googlemaproute.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class StationDetailsSheet extends StatelessWidget {
+class StationDetailsSheet extends ConsumerStatefulWidget {
   final StationData station;
   final ScrollController scrollController;
 
-  StationDetailsSheet({
+  const StationDetailsSheet({
     super.key,
     required this.station,
     required this.scrollController,
   });
 
-  // Dummy connectors
-  final List<Map<String, dynamic>> connectors = const [
-    {"name": "Zahraa Almaadai 1 (1)", "kw": 22, "status": "Available"},
-    {"name": "Zahraa Almaadai 2 (1)", "kw": 22, "status": "Charging"},
-    {"name": "Zahraa Almaadai 2 (2)", "kw": 22, "status": "Unavailable"},
-  ];
+  @override
+  ConsumerState<StationDetailsSheet> createState() => _StationDetailsSheetState();
+}
+
+class _StationDetailsSheetState extends ConsumerState<StationDetailsSheet> {
+  List<ConnectorData> connectors = [];
+  bool isLoading = true;
+  String? errorMessage;
+  bool _isDisposed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConnectors();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  Future<void> _loadConnectors() async {
+    if (widget.station.id == null) {
+      if (!mounted || _isDisposed) return;
+      setState(() {
+        isLoading = false;
+        errorMessage = "Station ID is missing";
+      });
+      return;
+    }
+
+    if (!mounted || _isDisposed) return;
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final repository = ref.read(stationRepositoryProvider);
+      final stationId = widget.station.id!;
+      
+      debugPrint("🔍 Loading connectors for station: $stationId (${widget.station.name})");
+      
+      // Fetch chargers for this station
+      final chargersResult = await repository.getChargers(stationId);
+      
+      if (!mounted || _isDisposed) return;
+      
+      debugPrint("🔍 Chargers API Response:");
+      debugPrint("   - Status: ${chargersResult.status}");
+      debugPrint("   - Error: ${chargersResult.errorMessage}");
+      debugPrint("   - Found ${chargersResult.data?.length ?? 0} chargers for station $stationId");
+      
+      if (chargersResult.errorMessage != null) {
+        if (!mounted || _isDisposed) return;
+        setState(() {
+          isLoading = false;
+          errorMessage = "Error loading chargers: ${chargersResult.errorMessage}";
+        });
+        return;
+      }
+      
+      if (chargersResult.data == null || chargersResult.data!.isEmpty) {
+        if (!mounted || _isDisposed) return;
+        debugPrint("⚠️ No chargers found for station $stationId");
+        setState(() {
+          isLoading = false;
+          connectors = [];
+          errorMessage = "No chargers found for this station";
+        });
+        return;
+      }
+
+      // Fetch connectors for each charger
+      List<ConnectorData> allConnectors = [];
+      
+      for (var charger in chargersResult.data!) {
+        if (_isDisposed) return;
+        
+        if (charger.id != null) {
+          debugPrint("🔍 Fetching connectors for charger: ${charger.id} (${charger.name})");
+          final connectorsResult = await repository.getConnectors(charger.id!);
+          if (!mounted || _isDisposed) return;
+          
+          debugPrint("🔍 Connectors API Response for charger ${charger.id}:");
+          debugPrint("   - Status: ${connectorsResult.status}");
+          debugPrint("   - Error: ${connectorsResult.errorMessage}");
+          debugPrint("   - Found ${connectorsResult.data?.length ?? 0} connectors");
+          
+          if (connectorsResult.data != null && connectorsResult.data!.isNotEmpty) {
+            debugPrint("🔍 Connectors for charger ${charger.id}:");
+            for (var connector in connectorsResult.data!) {
+              debugPrint("   - Connector: ${connector.identifier}, Station ID: ${connector.stationId}, Power: ${connector.powerKw}, Status: ${connector.status}");
+            }
+            
+            // Filter connectors to ensure they belong to this station
+            // Note: Since we're fetching connectors for chargers that belong to this station,
+            // all connectors should already belong to this station, but we filter to be safe
+            final stationConnectors = connectorsResult.data!
+                .where((connector) {
+                  final connectorStationId = connector.stationId?.toString().trim();
+                  final targetStationId = stationId.toString().trim();
+                  final matches = connectorStationId == targetStationId;
+                  
+                  if (!matches) {
+                    debugPrint("   ⚠️ Connector ${connector.identifier} filtered out");
+                    debugPrint("      Expected stationId: '$targetStationId'");
+                    debugPrint("      Got stationId: '$connectorStationId'");
+                  }
+                  return matches;
+                })
+                .toList();
+            debugPrint("🔍 Filtered to ${stationConnectors.length} connectors for station $stationId");
+            allConnectors.addAll(stationConnectors);
+          } else if (connectorsResult.errorMessage != null) {
+            debugPrint("⚠️ Error fetching connectors for charger ${charger.id}: ${connectorsResult.errorMessage}");
+          } else {
+            debugPrint("⚠️ No connectors returned for charger ${charger.id}");
+          }
+        }
+      }
+      
+      debugPrint("🔍 Total connectors for station $stationId: ${allConnectors.length}");
+
+      if (!mounted || _isDisposed) return;
+      setState(() {
+        isLoading = false;
+        connectors = allConnectors;
+        if (allConnectors.isEmpty && errorMessage == null) {
+          errorMessage = "No connectors available for this station";
+        }
+      });
+    } catch (e, stackTrace) {
+      debugPrint("❌ Exception in _loadConnectors: $e");
+      debugPrint("❌ Stack trace: $stackTrace");
+      if (!mounted || _isDisposed) return;
+      setState(() {
+        isLoading = false;
+        errorMessage = "Failed to load connectors: $e";
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +182,7 @@ class StationDetailsSheet extends StatelessWidget {
             // SCROLLABLE CONTENT
             Expanded(
               child: SingleChildScrollView(
-                controller: scrollController,
+                controller: widget.scrollController,
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,7 +250,7 @@ class StationDetailsSheet extends StatelessWidget {
           // CENTERED TEXT
           Center(
             child: Text(
-              station.name??"",
+              widget.station.name??"",
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
@@ -149,11 +291,11 @@ class StationDetailsSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            station.name??"",
+            widget.station.name??"",
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
           Text(
-            station.address??"",
+            widget.station.address??"",
             style: const TextStyle(
               fontSize: 12,
               color: AppColors.netural600Color,
@@ -209,7 +351,12 @@ class StationDetailsSheet extends StatelessWidget {
           child: InkWell(
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, Routes.zahraaAlmaadai);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ZahraaAlmaadai(station: widget.station),
+                ),
+              );
             },
             child: Container(
               height: 48,
@@ -234,7 +381,7 @@ class StationDetailsSheet extends StatelessWidget {
           child: InkWell(
             onTap: () {
               Navigator.pop(context);
-              openGoogleMapsRoute(station.latitude??0, station.longitude??0);
+              openGoogleMapsRoute(widget.station.latitude??0, widget.station.longitude??0);
             },
             child: Container(
               height: 48,
@@ -283,50 +430,110 @@ class StationDetailsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          ...connectors.map((c) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+                ),
+              ),
+            )
+          else if (errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
                 children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.002,
-                    ),
-                    decoration: BoxDecoration(shape: BoxShape.circle),
-                    child: Image.asset(
-                      "assets/icons/station/session.png",
-                      width: 20,
-                      height: 20,
-                    ),
-                  ),
-                  SizedBox(width: screenWidth * 0.005),
-                  Expanded(
-                    child: Text(
-                      c["name"],
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ),
                   Text(
-                    "${c["kw"]} Kwh",
-                    style: const TextStyle(color: Colors.grey),
+                    errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    c["status"],
-                    style: TextStyle(
-                      color:
-                          c["status"] == "Available"
-                              ? Colors.green
-                              : c["status"] == "Charging"
-                              ? Colors.orange
-                              : Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: _loadConnectors,
+                    child: const Text("Retry"),
                   ),
                 ],
               ),
-            );
-          }).toList(),
+            )
+          else if (connectors.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Text(
+                "No connectors available",
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          else
+            ...connectors.map((c) {
+              // Map API status to display status
+              String displayStatus = c.status ?? "";
+              Color statusColor;
+              
+              switch (displayStatus.toLowerCase()) {
+                case "available":
+                  statusColor = Colors.green;
+                  displayStatus = "Available";
+                  break;
+                case "charging":
+                  statusColor = Colors.orange;
+                  displayStatus = "Charging";
+                  break;
+                case "preparing":
+                  statusColor = Colors.orange;
+                  displayStatus = "Preparing";
+                  break;
+                case "unavailable":
+                  statusColor = Colors.red;
+                  displayStatus = "Unavailable";
+                  break;
+                case "faulted":
+                  statusColor = Colors.red;
+                  displayStatus = "Faulted";
+                  break;
+                default:
+                  statusColor = Colors.grey;
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth * 0.002,
+                      ),
+                      decoration: const BoxDecoration(shape: BoxShape.circle),
+                      child: Image.asset(
+                        "assets/icons/station/session.png",
+                        width: 20,
+                        height: 20,
+                      ),
+                    ),
+                    SizedBox(width: screenWidth * 0.005),
+                    Expanded(
+                      child: Text(
+                        c.identifier ?? "",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                    Text(
+                      "${c.powerKw ?? 0} Kwh",
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      displayStatus,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
         ],
       ),
     );

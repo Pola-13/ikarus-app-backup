@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:ikarusapp/core/constants/colors.dart';
 import 'package:ikarusapp/core/constants/device.dart';
+import 'package:ikarusapp/core/injection/base_injection.dart';
 import 'package:ikarusapp/features/station_management/data/models/station_data.dart';
 import 'package:ikarusapp/features/station_management/data/station_data.dart';
 import 'package:ikarusapp/features/station_management/presentation/widgets/search_bar.dart';
@@ -12,14 +14,14 @@ import 'package:ikarusapp/features/station_management/presentation/widgets/stati
 
 enum Segment { map, list, favorite }
 
-class StationPage extends StatefulWidget {
+class StationPage extends ConsumerStatefulWidget {
   const StationPage({super.key});
 
   @override
-  State<StationPage> createState() => _StationPageState();
+  ConsumerState<StationPage> createState() => _StationPageState();
 }
 
-class _StationPageState extends State<StationPage> {
+class _StationPageState extends ConsumerState<StationPage> {
   GoogleMapController? mapController;
   Segment segment = Segment.map;
 
@@ -27,6 +29,48 @@ class _StationPageState extends State<StationPage> {
   final TextEditingController searchCtrl = TextEditingController();
 
   bool showMapCards = false;
+  
+  // Track favorite station IDs
+  Set<String> favoriteStationIds = {};
+  
+  static const String _favoriteStationsKey = 'favorite_station_ids';
+
+  @override
+  void initState() {
+    super.initState();
+    // Load favorites after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadFavorites();
+    });
+  }
+
+  // Load favorites from SharedPreferences
+  Future<void> _loadFavorites() async {
+    try {
+      final prefs = ref.read(sharedPreferencesProvider);
+      final favoriteIdsString = prefs.getString(_favoriteStationsKey);
+      if (favoriteIdsString != null && favoriteIdsString.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            favoriteStationIds = favoriteIdsString.split(',').toSet();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading favorites: $e');
+    }
+  }
+
+  // Save favorites to SharedPreferences
+  Future<void> _saveFavorites() async {
+    try {
+      final prefs = ref.read(sharedPreferencesProvider);
+      final favoriteIdsString = favoriteStationIds.join(',');
+      await prefs.setString(_favoriteStationsKey, favoriteIdsString);
+    } catch (e) {
+      debugPrint('Error saving favorites: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +146,7 @@ class _StationPageState extends State<StationPage> {
                 child: StationList(
                   // stations: filteredStations,
                   onToggleFavorite: toggleFavorite,
+                  favoriteStationIds: favoriteStationIds,
                 ),
               ),
             ),
@@ -115,6 +160,8 @@ class _StationPageState extends State<StationPage> {
                 //     .where((s) => s["favorite"] == true)
                 //     .toList(),
                 onToggleFavorite: toggleFavorite,
+                favoriteStationIds: favoriteStationIds,
+                showOnlyFavorites: true,
               ),
             ),
 
@@ -143,7 +190,15 @@ class _StationPageState extends State<StationPage> {
   // STAR FAVORITE LOGIC
   void toggleFavorite(StationData station) {
     setState(() {
-      // station["favorite"] = !(station["favorite"] ?? false);
+      if (station.id != null) {
+        if (favoriteStationIds.contains(station.id)) {
+          favoriteStationIds.remove(station.id);
+        } else {
+          favoriteStationIds.add(station.id!);
+        }
+        // Save to SharedPreferences
+        _saveFavorites();
+      }
     });
   }
 }

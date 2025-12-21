@@ -15,11 +15,15 @@ import 'package:ikarusapp/features/station_management/presentation/widgets/conne
 class StationList extends StatefulWidget {
   // final List<Map<String, dynamic>> stations;
   final Function(StationData) onToggleFavorite;
+  final Set<String> favoriteStationIds;
+  final bool showOnlyFavorites;
 
   const StationList({
     super.key,
     // required this.stations,
     required this.onToggleFavorite,
+    required this.favoriteStationIds,
+    this.showOnlyFavorites = false,
   });
 
   @override
@@ -33,6 +37,9 @@ class _StationListState extends State<StationList> {
       ) {
         return StationsViewModel(ref.read(stationRepositoryProvider));
       });
+
+  // Track expanded state for each station
+  final Set<String> _expandedStationIds = {};
 
   @override
   void initState() {
@@ -50,8 +57,6 @@ class _StationListState extends State<StationList> {
   @override
   Widget build(BuildContext context) {
     final double screenWidth = Device.deviceWidth(context: context);
-
-    bool expanded = false;
 
     return Consumer(
       builder: (ctx, ref, _) {
@@ -74,36 +79,41 @@ class _StationListState extends State<StationList> {
             ),
           );
         }
-        if (stationData.isEmpty) {
+        // Filter stations if showing only favorites
+        List<StationData> displayStations = widget.showOnlyFavorites
+            ? stationData.where((station) => 
+                station.id != null && widget.favoriteStationIds.contains(station.id))
+                .toList()
+            : stationData;
+
+        if (displayStations.isEmpty) {
           return Center(
             child: Text(
-              "No Stations Yet",
+              widget.showOnlyFavorites ? "No Favorite Stations Yet" : "No Stations Yet",
               style: TextStyle(fontSize: screenWidth * 0.05),
             ),
           );
         }
         return ListView.builder(
           padding: EdgeInsets.all(screenWidth * 0.04),
-          itemCount: stationData.length,
+          itemCount: displayStations.length,
           itemBuilder: (context, i) {
-            final station = stationData[i];
+            final station = displayStations[i];
 
-            return StatefulBuilder(
-              builder: (context, setState) {
-                return Container(
-                  margin: EdgeInsets.only(bottom: screenWidth * 0.04),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.03,
-                    vertical: screenWidth * 0.02,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(screenWidth * 0.04),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 8),
-                    ],
-                  ),
-                  child: Column(
+            return Container(
+              margin: EdgeInsets.only(bottom: screenWidth * 0.04),
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.03,
+                vertical: screenWidth * 0.02,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black12, blurRadius: 8),
+                ],
+              ),
+              child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       //  NAME / ADDRESS
@@ -144,7 +154,7 @@ class _StationListState extends State<StationList> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => ZahraaAlmaadai(),
+                                      builder: (context) => ZahraaAlmaadai(station: station),
                                     ),
                                   );
                                 },
@@ -175,7 +185,7 @@ class _StationListState extends State<StationList> {
                                     horizontal: screenWidth * 0.01,
                                   ),
                                   child: Image.asset(
-                                    station.name == "true"
+                                    station.id != null && widget.favoriteStationIds.contains(station.id)
                                         ? "assets/icons/station/selected_star.png"
                                         : "assets/icons/station/dimmedstar.png",
                                     width: screenWidth * 0.07,
@@ -240,11 +250,19 @@ class _StationListState extends State<StationList> {
                               SizedBox(width: 6),
 
                               GestureDetector(
-                                onTap:
-                                    () => setState(() => expanded = !expanded),
+                                onTap: () {
+                                  setState(() {
+                                    if (station.id != null) {
+                                      if (_expandedStationIds.contains(station.id)) {
+                                        _expandedStationIds.remove(station.id);
+                                      } else {
+                                        _expandedStationIds.add(station.id!);
+                                      }
+                                    }
+                                  });
+                                },
                                 child: Icon(
-                                  expanded
-                                      // ignore: dead_code
+                                  station.id != null && _expandedStationIds.contains(station.id)
                                       ? Icons.keyboard_arrow_up
                                       : Icons.keyboard_arrow_down,
                                   size: 24,
@@ -256,7 +274,7 @@ class _StationListState extends State<StationList> {
                         ],
                       ),
                       SizedBox(height: 6),
-                      if (expanded) ...[
+                      if (station.id != null && _expandedStationIds.contains(station.id)) ...[
                         // Divider(),
                         SizedBox(height: 6),
                         ...connectorsDummyData.map((c) {
@@ -305,8 +323,6 @@ class _StationListState extends State<StationList> {
                       const SizedBox(height: 8),
                     ],
                   ),
-                );
-              },
             );
           },
         );

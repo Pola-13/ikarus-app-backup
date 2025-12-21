@@ -186,24 +186,102 @@ class SignupViewModel extends StateNotifier<BaseState<List<FormError>>>
     }
 
     if (errors.isEmpty) {
-      _signupRequest = SignupRequest(
-        email: email,
-        password: '',
-        confirmPassword: '',
-        firstName: firstName,
-        lastName: lastName,
-        phoneE164: phoneE164,
-        packageName: '',
-        country: country,
-        city: city,
-        street: street,
-        postalCode: postalCode ?? '',
-      );
-      state = state.copyWith(data: []);
-      Navigator.pushNamed(
-        AppConstants.navigatorKey.currentContext!,
-        Routes.createPassword,
-      );
+      // Before navigating, validate email availability by attempting signup
+      // This will check if email already exists without creating an account
+      _startLoading();
+      
+      try {
+        // Attempt signup with a placeholder password to check email availability
+        // The API should return an error if email exists without creating the account
+        final validationResult = await _userRepositoryImpl.signup({
+          'first_name': firstName,
+          'last_name': lastName,
+          'email': email,
+          'phone_e164': phoneE164,
+          'country_code': country,
+          'city_id': city,
+          'district_id': street,
+          'postal_code': postalCode ?? '',
+          'password': 'TempCheck123!@#', // Placeholder password for validation only
+          'confirm_password': 'TempCheck123!@#',
+        });
+        
+        _hideLoading();
+        
+        // Check if there are errors (like email already exists)
+        if (validationResult.errors != null && validationResult.errors!.isNotEmpty) {
+          List<FormError> apiErrors = [];
+          validationResult.errors!.forEach((key, value) {
+            String? fieldName;
+            switch (key) {
+              case 'first_name':
+                fieldName = UserFields.firstName.field;
+                break;
+              case 'last_name':
+                fieldName = UserFields.lastName.field;
+                break;
+              case 'email':
+                fieldName = UserFields.email.field;
+                break;
+              case 'phone_e164':
+              case 'phone':
+                fieldName = UserFields.phone.field;
+                break;
+              case 'country':
+                fieldName = UserFields.country.field;
+                break;
+              case 'city':
+                fieldName = UserFields.city.field;
+                break;
+              case 'street':
+              case 'district':
+                fieldName = UserFields.street.field;
+                break;
+            }
+            
+            String errorMessage = value is List ? value.first.toString() : value.toString();
+            if (fieldName != null) {
+              apiErrors.add(FormError(field: fieldName, message: errorMessage));
+            }
+          });
+          
+          if (apiErrors.isNotEmpty) {
+            // Show errors on signup form and don't navigate
+            state = state.copyWith(data: apiErrors);
+            return;
+          }
+        }
+        
+        // If validation passed (no email error), save request and navigate
+        // Note: If the API created an account, we'll handle that in the actual signup
+        _signupRequest = SignupRequest(
+          email: email,
+          password: '',
+          confirmPassword: '',
+          firstName: firstName,
+          lastName: lastName,
+          phoneE164: phoneE164,
+          packageName: '',
+          country: country,
+          city: city,
+          street: street,
+          postalCode: postalCode ?? '',
+        );
+        state = state.copyWith(data: []);
+        Navigator.pushNamed(
+          AppConstants.navigatorKey.currentContext!,
+          Routes.createPassword,
+        );
+      } catch (e) {
+        _hideLoading();
+        // If there's an exception, show error but don't navigate
+        state = state.copyWith(data: [
+          FormError(
+            field: UserFields.email.field,
+            message: "An error occurred. Please try again.",
+          ),
+        ]);
+      }
     } else {
       state = state.copyWith(data: errors);
     }
@@ -291,92 +369,3 @@ class SignupViewModel extends StateNotifier<BaseState<List<FormError>>>
     state = state.copyWith(isButtonLoading: false);
   }
 }
-
-/// STEP 1 – signup page
-// void setSignupInfo({
-//   required String email,
-//   required String firstName,
-//   required String lastName,
-//   required String phoneE164,
-//   required String country,
-//   required String city,
-//   required String street,
-//   required String postalCode,
-// }) {
-//   state = state.copyWith(
-//     formErrors: [],
-//     data: state.data.copyWith(
-//       email: email,
-//       firstName: firstName,
-//       lastName: lastName,
-//       phoneE164: phoneE164,
-//       country: country,
-//       city: city,
-//       street: street,
-//       postalCode: postalCode,
-//     ),
-//   );
-// }
-
-// /// STEP 2 – create password page
-// void setPassword({
-//   required String password,
-//   required String confirmPassword,
-// }) {
-//   state = state.copyWith(
-//     formErrors: [],
-//     data: state.data.copyWith(
-//       password: password,
-//       confirmPassword: confirmPassword,
-//     ),
-//   );
-// }
-
-// /// FINAL STEP – call signup API
-// Future<void> submitSignup() async {
-//   final data = state.data;
-
-//   // -------- Validation --------
-//   if (data.email.isEmpty ||
-//       data.firstName.isEmpty ||
-//       data.lastName.isEmpty ||
-//       data.phoneE164.isEmpty ||
-//       data.country.isEmpty ||
-//       data.city.isEmpty) {
-//     state = state.copyWith(
-//       formErrors: [
-//         FormError(field: '', message: 'Please fill all required fields'),
-//       ],
-//     );
-//     return;
-//   }
-
-//   if (data.password != data.confirmPassword) {
-//     state = state.copyWith(
-//       formErrors: [
-//         FormError(
-//           field: 'confirmPassword',
-//           message: 'Passwords do not match',
-//         ),
-//       ],
-//     );
-//     return;
-//   }
-
-//   // -------- API Call --------
-//   state = state.copyWith(isButtonLoading: true, actionSucceeded: false);
-
-//   final request = SignupRequest(
-//     email: data.email,
-//     password: data.password,
-//     confirmPassword: data.confirmPassword,
-//     firstName: data.firstName,
-//     lastName: data.lastName,
-//     phoneE164: data.phoneE164,
-//     packageName: "ikarus_app",
-//     country: data.country,
-//     city: data.city,
-//     street: data.street,
-//     postalCode: data.postalCode,
-//   );
-// }

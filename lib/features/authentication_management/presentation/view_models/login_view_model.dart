@@ -41,7 +41,7 @@ class LoginViewModel extends StateNotifier<BaseState<List<FormError>>>
       errors.add(
         FormError(
           field: UserFields.email.field,
-          message: "Please enter valid email address",
+          message: "Please enter a valid email address",
         ),
       );
     }

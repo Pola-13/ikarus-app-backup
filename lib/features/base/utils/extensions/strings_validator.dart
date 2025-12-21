@@ -6,9 +6,32 @@ extension StringsValidator on String {
   }
 
   bool isValidEmail() {
+    // Improved email validation that requires:
+    // - Valid local part (before @)
+    // - @ symbol
+    // - Valid domain with at least one dot and TLD with 2+ letters
+    // Rejects domains like "334343e" (no dot, invalid TLD)
     var pattern =
-        r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$';
-    bool emailValid = RegExp(pattern).hasMatch(this);
+        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
+    bool emailValid = RegExp(pattern).hasMatch(this.trim());
+    
+    // Additional check: domain must have at least one letter (not all numbers)
+    if (emailValid) {
+      final parts = this.trim().split('@');
+      if (parts.length == 2) {
+        final domain = parts[1];
+        final domainParts = domain.split('.');
+        // Check that the main domain part (before TLD) contains at least one letter
+        if (domainParts.length >= 2) {
+          final mainDomain = domainParts[domainParts.length - 2];
+          // If main domain is all numbers, it's invalid
+          if (RegExp(r'^[0-9]+$').hasMatch(mainDomain)) {
+            return false;
+          }
+        }
+      }
+    }
+    
     return emailValid;
   }
 

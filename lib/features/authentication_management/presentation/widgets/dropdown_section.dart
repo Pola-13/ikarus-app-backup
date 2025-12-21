@@ -35,7 +35,9 @@ class _DropdownSectionState extends ConsumerState<DropdownSection> {
     super.initState();
     // Load countries when widget is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(locationViewModelProvider.notifier).loadCountries();
+      if (mounted) {
+        ref.read(locationViewModelProvider.notifier).loadCountries();
+      }
     });
   }
 

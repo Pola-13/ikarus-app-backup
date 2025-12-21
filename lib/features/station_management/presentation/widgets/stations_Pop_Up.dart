@@ -311,6 +311,45 @@ class _StationDetailsSheetState extends ConsumerState<StationDetailsSheet> {
     final screenWidth = Device.deviceWidth(context: context);
     final screenHeight = Device.deviceHeight(context: context);
 
+    // Helper function to get color based on connector status
+    Color _getStatusColor(String? status) {
+      final statusLower = status?.toLowerCase() ?? "";
+      switch (statusLower) {
+        case "available":
+          return Colors.green;
+        case "charging":
+        case "preparing":
+          return Colors.orange;
+        case "unavailable":
+        case "faulted":
+          return Colors.red;
+        default:
+          return Colors.grey;
+      }
+    }
+
+    // Build dots for each connector in order
+    List<Widget> statusDots = [];
+    if (connectors.isNotEmpty) {
+      for (var connector in connectors) {
+        statusDots.add(_dot(_getStatusColor(connector.status)));
+        statusDots.add(const SizedBox(width: 6));
+      }
+      // Remove the last SizedBox
+      if (statusDots.isNotEmpty) {
+        statusDots.removeLast();
+      }
+    } else if (!isLoading && errorMessage == null) {
+      // Default dots if no connectors loaded yet
+      statusDots = [
+        _dot(Colors.green),
+        const SizedBox(width: 6),
+        _dot(Colors.orange),
+        const SizedBox(width: 6),
+        _dot(Colors.red),
+      ];
+    }
+
     return Padding(
       padding: EdgeInsets.symmetric(
         vertical: screenHeight * 0.02,
@@ -320,13 +359,7 @@ class _StationDetailsSheetState extends ConsumerState<StationDetailsSheet> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
-            children: [
-              _dot(Colors.green),
-              const SizedBox(width: 6),
-              _dot(Colors.orange),
-              const SizedBox(width: 6),
-              _dot(Colors.red),
-            ],
+            children: statusDots,
           ),
           Row(
             children: [

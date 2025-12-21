@@ -58,7 +58,9 @@ class _ManagePersonalInfoPageState extends ConsumerState<ManagePersonalInfoPage>
     super.initState();
     // Load profile data when page is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(profileViewModelProvider.notifier).loadProfile();
+      if (mounted) {
+        ref.read(profileViewModelProvider.notifier).loadProfile();
+      }
     });
   }
 

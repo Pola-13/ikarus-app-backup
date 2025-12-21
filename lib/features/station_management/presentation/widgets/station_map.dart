@@ -41,9 +41,14 @@ class _StationMapState extends State<StationMap> {
     super.initState();
 
     Future.delayed(const Duration(seconds: 0), () async {
+      if (!mounted) return;
       await ProviderScope.containerOf(context, listen: false)
           .read(_viewModelProvider.notifier)
-          .getStations(onSuccess: () => loadMarkers());
+          .getStations(onSuccess: () {
+            if (mounted) {
+              loadMarkers();
+            }
+          });
     });
   }
 
@@ -73,7 +78,9 @@ class _StationMapState extends State<StationMap> {
             );
           }).toSet();
 
-      setState(() => markers = newMarkers);
+      if (mounted) {
+        setState(() => markers = newMarkers);
+      }
     }
   }
 

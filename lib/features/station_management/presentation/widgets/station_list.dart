@@ -47,6 +47,7 @@ class _StationListState extends State<StationList> {
     super.initState();
 
     Future.delayed(const Duration(seconds: 0), () {
+      if (!mounted) return;
       ProviderScope.containerOf(
         context,
         listen: false,

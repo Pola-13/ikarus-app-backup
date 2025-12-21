@@ -83,6 +83,13 @@ class SignupViewModel extends StateNotifier<BaseState<List<FormError>>>
           message: "enter your first name",
         ),
       );
+    } else if (!firstName.trim().isValidName()) {
+      errors.add(
+        FormError(
+          field: UserFields.firstName.field,
+          message: "Please enter a valid name",
+        ),
+      );
     }
 
     if (lastName.isEmpty) {
@@ -90,6 +97,13 @@ class SignupViewModel extends StateNotifier<BaseState<List<FormError>>>
         FormError(
           field: UserFields.lastName.field,
           message: "enter your last name",
+        ),
+      );
+    } else if (!lastName.trim().isValidName()) {
+      errors.add(
+        FormError(
+          field: UserFields.lastName.field,
+          message: "Please enter a valid name",
         ),
       );
     }

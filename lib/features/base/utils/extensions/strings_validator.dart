@@ -23,7 +23,10 @@ extension StringsValidator on String {
   }
 
   bool isValidName() {
-    bool nameValid = RegExp(r"^[a-zA-Z\u0621-\u064A- ]").hasMatch(this);
-    return nameValid;
+    // Allow letters (including accented characters and Arabic), spaces, hyphens, and apostrophes
+    // Reject special characters like #, @, numbers, etc.
+    // The regex validates the entire string, not just the first character
+    bool nameValid = RegExp(r"^[a-zA-ZÀ-ÿ\u0621-\u064A\s'-]+$").hasMatch(this.trim());
+    return nameValid && this.trim().isNotEmpty && this.trim().length >= 2;
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ikarusapp/core/constants/device.dart';
 import 'package:ikarusapp/core/constants/colors.dart';
 import 'package:ikarusapp/core/constants/font_family.dart';
@@ -111,6 +112,10 @@ class _PhoneSectionState extends State<PhoneSection> {
                 child: TextFormField(
                   controller: widget.phoneController,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
                   decoration: InputDecoration(
                     hintText: "1xxxxxxxxx",
                     filled: true,
